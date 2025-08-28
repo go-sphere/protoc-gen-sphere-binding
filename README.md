@@ -4,10 +4,10 @@
 
 ## Installation
 
-To install `protoc-gen-sphere`, use the following command:
+To install `protoc-gen-sphere-binding`, use the following command:
 
 ```bash
-go install github.com/TBXark/sphere/cmd/protoc-gen-sphere-binding@latest
+go install github.com/go-sphere/protoc-gen-sphere-binding@latest
 ```
 
 
@@ -27,7 +27,7 @@ managed:
   enabled: true
   override:
     - file_option: go_package_prefix
-      value: github.com/TBXark/sphere/layout/api
+      value: github.com/go-sphere/sphere-layout/api
 plugins:
   - local: protoc-gen-sphere-binding
     out: api
