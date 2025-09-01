@@ -60,8 +60,6 @@ The plugin supports the following binding locations through the `sphere.binding.
 - `BINDING_LOCATION_BODY`: Fields bound to JSON request body (default behavior)
 - `BINDING_LOCATION_QUERY`: Fields bound to query parameters (adds `form` tag)
 - `BINDING_LOCATION_URI`: Fields bound to URI path parameters (adds `uri` tag, removes `json` tag)
-- `BINDING_LOCATION_HEADER`: Fields bound to HTTP headers (adds `header` tag)
-- `BINDING_LOCATION_FORM`: Fields bound to form data (adds `form` tag)
 
 ## Proto Definition Example
 
