@@ -15,16 +15,16 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func GenerateFile(file *protogen.File, out string) error {
-	err := generateFile(file, out)
+func GenerateFile(file *protogen.File, out string, autoRemoveJson bool) error {
+	err := generateFile(file, out, autoRemoveJson)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func generateFile(file *protogen.File, out string) error {
-	tags, err := extractFile(file)
+func generateFile(file *protogen.File, out string, autoRemoveJson bool) error {
+	tags, err := extractFile(file, autoRemoveJson)
 	if err != nil {
 		return err
 	}
@@ -63,10 +63,10 @@ func generateFile(file *protogen.File, out string) error {
 	return nil
 }
 
-func extractFile(file *protogen.File) (StructTags, error) {
+func extractFile(file *protogen.File, autoRemoveJson bool) (StructTags, error) {
 	tags := make(StructTags)
 	for _, message := range file.Messages {
-		extraTags, err := extractMessage(message, binding.BindingLocation_BINDING_LOCATION_UNSPECIFIED, nil)
+		extraTags, err := extractMessage(message, binding.BindingLocation_BINDING_LOCATION_UNSPECIFIED, nil, autoRemoveJson)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +79,7 @@ func extractFile(file *protogen.File) (StructTags, error) {
 	return tags, nil
 }
 
-func extractMessage(message *protogen.Message, location binding.BindingLocation, autoTags []string) (StructTags, error) {
+func extractMessage(message *protogen.Message, location binding.BindingLocation, autoTags []string, autoRemoveJson bool) (StructTags, error) {
 	tags := make(StructTags)
 
 	if proto.HasExtension(message.Desc.Options(), binding.E_DefaultLocation) {
@@ -92,7 +92,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 	messageTags := make(map[string]*structtag.Tags)
 	// process fields
 	for _, field := range message.Fields {
-		fieldTags, err := extractField(field, location, autoTags)
+		fieldTags, err := extractField(field, location, autoTags, autoRemoveJson)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +111,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 			defaultOneOfAutoTags = proto.GetExtension(oneOf.Desc.Options(), binding.E_DefaultOneofAutoTags).([]string)
 		}
 		for _, field := range oneOf.Fields {
-			fieldTags, err := extractField(field, defaultOneOfBindingLocation, defaultOneOfAutoTags)
+			fieldTags, err := extractField(field, defaultOneOfBindingLocation, defaultOneOfAutoTags, autoRemoveJson)
 			if err != nil {
 				return nil, err
 			}
@@ -122,7 +122,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 	}
 	// process nested messages
 	for _, nested := range message.Messages {
-		extraTags, err := extractMessage(nested, location, autoTags)
+		extraTags, err := extractMessage(nested, location, autoTags, autoRemoveJson)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +135,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 	return tags, nil
 }
 
-func extractField(field *protogen.Field, location binding.BindingLocation, autoTags []string) (*structtag.Tags, error) {
+func extractField(field *protogen.Field, location binding.BindingLocation, autoTags []string, autoRemoveJson bool) (*structtag.Tags, error) {
 	if proto.HasExtension(field.Desc.Options(), binding.E_Location) {
 		location = proto.GetExtension(field.Desc.Options(), binding.E_Location).(binding.BindingLocation)
 	}
@@ -157,29 +157,24 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 	}
 
 	// Add sphere binding tags
-	switch location {
-	case binding.BindingLocation_BINDING_LOCATION_QUERY:
+	noJsonBinding := map[binding.BindingLocation]string{
+		binding.BindingLocation_BINDING_LOCATION_QUERY:  "form",
+		binding.BindingLocation_BINDING_LOCATION_URI:    "uri",
+		binding.BindingLocation_BINDING_LOCATION_HEADER: "header",
+	}
+	if tag, ok := noJsonBinding[location]; ok {
 		_ = fieldTags.Set(&structtag.Tag{
-			Key:     "form",
+			Key:     tag,
 			Name:    string(field.Desc.Name()),
 			Options: nil,
 		})
-		_ = fieldTags.Set(&structtag.Tag{
-			Key:     "json",
-			Name:    "-",
-			Options: nil,
-		})
-	case binding.BindingLocation_BINDING_LOCATION_URI:
-		_ = fieldTags.Set(&structtag.Tag{
-			Key:     "uri",
-			Name:    string(field.Desc.Name()),
-			Options: nil,
-		})
-		_ = fieldTags.Set(&structtag.Tag{
-			Key:     "json",
-			Name:    "-",
-			Options: nil,
-		})
+		if autoRemoveJson {
+			_ = fieldTags.Set(&structtag.Tag{
+				Key:     "json",
+				Name:    "-",
+				Options: nil,
+			})
+		}
 	}
 
 	// Add manual tags
