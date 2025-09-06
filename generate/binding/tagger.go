@@ -15,16 +15,20 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func GenerateFile(file *protogen.File, out string, autoRemoveJson bool) error {
-	err := generateFile(file, out, autoRemoveJson)
+type Config struct {
+	AutoRemoveJson bool
+}
+
+func GenerateFile(file *protogen.File, out string, config *Config) error {
+	err := generateFile(file, out, config)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func generateFile(file *protogen.File, out string, autoRemoveJson bool) error {
-	tags, err := extractFile(file, autoRemoveJson)
+func generateFile(file *protogen.File, out string, config *Config) error {
+	tags, err := extractFile(file, config)
 	if err != nil {
 		return err
 	}
@@ -63,10 +67,10 @@ func generateFile(file *protogen.File, out string, autoRemoveJson bool) error {
 	return nil
 }
 
-func extractFile(file *protogen.File, autoRemoveJson bool) (StructTags, error) {
+func extractFile(file *protogen.File, config *Config) (StructTags, error) {
 	tags := make(StructTags)
 	for _, message := range file.Messages {
-		extraTags, err := extractMessage(message, binding.BindingLocation_BINDING_LOCATION_UNSPECIFIED, nil, autoRemoveJson)
+		extraTags, err := extractMessage(message, binding.BindingLocation_BINDING_LOCATION_UNSPECIFIED, nil, config)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +83,7 @@ func extractFile(file *protogen.File, autoRemoveJson bool) (StructTags, error) {
 	return tags, nil
 }
 
-func extractMessage(message *protogen.Message, location binding.BindingLocation, autoTags []string, autoRemoveJson bool) (StructTags, error) {
+func extractMessage(message *protogen.Message, location binding.BindingLocation, autoTags []string, config *Config) (StructTags, error) {
 	tags := make(StructTags)
 
 	if proto.HasExtension(message.Desc.Options(), binding.E_DefaultLocation) {
@@ -92,7 +96,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 	messageTags := make(map[string]*structtag.Tags)
 	// process fields
 	for _, field := range message.Fields {
-		fieldTags, err := extractField(field, location, autoTags, autoRemoveJson)
+		fieldTags, err := extractField(field, location, autoTags, config)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +115,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 			defaultOneOfAutoTags = proto.GetExtension(oneOf.Desc.Options(), binding.E_DefaultOneofAutoTags).([]string)
 		}
 		for _, field := range oneOf.Fields {
-			fieldTags, err := extractField(field, defaultOneOfBindingLocation, defaultOneOfAutoTags, autoRemoveJson)
+			fieldTags, err := extractField(field, defaultOneOfBindingLocation, defaultOneOfAutoTags, config)
 			if err != nil {
 				return nil, err
 			}
@@ -122,7 +126,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 	}
 	// process nested messages
 	for _, nested := range message.Messages {
-		extraTags, err := extractMessage(nested, location, autoTags, autoRemoveJson)
+		extraTags, err := extractMessage(nested, location, autoTags, config)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +139,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 	return tags, nil
 }
 
-func extractField(field *protogen.Field, location binding.BindingLocation, autoTags []string, autoRemoveJson bool) (*structtag.Tags, error) {
+func extractField(field *protogen.Field, location binding.BindingLocation, autoTags []string, config *Config) (*structtag.Tags, error) {
 	if proto.HasExtension(field.Desc.Options(), binding.E_Location) {
 		location = proto.GetExtension(field.Desc.Options(), binding.E_Location).(binding.BindingLocation)
 	}
@@ -168,7 +172,7 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 			Name:    string(field.Desc.Name()),
 			Options: nil,
 		})
-		if autoRemoveJson {
+		if config.AutoRemoveJson {
 			_ = fieldTags.Set(&structtag.Tag{
 				Key:     "json",
 				Name:    "-",

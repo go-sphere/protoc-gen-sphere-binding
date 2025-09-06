@@ -12,7 +12,7 @@ import (
 var (
 	showVersion    = flag.Bool("version", false, "print the version and exit")
 	autoRemoveJson = flag.Bool("auto_remove_json", true, "automatically remove json tag if sphere binding location set")
-	out            = flag.String("out", "gen", "output directory for generated files")
+	out            = flag.String("out", "api", "output directory for generated files")
 )
 
 func main() {
@@ -29,7 +29,9 @@ func main() {
 			if !f.Generate {
 				continue
 			}
-			err := binding.GenerateFile(f, *out, *autoRemoveJson)
+			err := binding.GenerateFile(f, *out, &binding.Config{
+				AutoRemoveJson: *autoRemoveJson,
+			})
 			if err != nil {
 				return err
 			}
