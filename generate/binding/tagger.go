@@ -162,16 +162,20 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 
 	// Add sphere binding tags
 	noJsonBinding := map[binding.BindingLocation]string{
-		binding.BindingLocation_BINDING_LOCATION_QUERY:  "form",
-		binding.BindingLocation_BINDING_LOCATION_URI:    "uri",
-		binding.BindingLocation_BINDING_LOCATION_HEADER: "header",
+		binding.BindingLocation_BINDING_LOCATION_UNSPECIFIED: "",
+		binding.BindingLocation_BINDING_LOCATION_QUERY:       "query",
+		binding.BindingLocation_BINDING_LOCATION_URI:         "uri",
+		binding.BindingLocation_BINDING_LOCATION_FORM:        "form",
+		binding.BindingLocation_BINDING_LOCATION_HEADER:      "header",
 	}
 	if tag, ok := noJsonBinding[location]; ok {
-		_ = fieldTags.Set(&structtag.Tag{
-			Key:     tag,
-			Name:    string(field.Desc.Name()),
-			Options: nil,
-		})
+		if tag != "" {
+			_ = fieldTags.Set(&structtag.Tag{
+				Key:     tag,
+				Name:    string(field.Desc.Name()),
+				Options: nil,
+			})
+		}
 		if config.AutoRemoveJson {
 			_ = fieldTags.Set(&structtag.Tag{
 				Key:     "json",

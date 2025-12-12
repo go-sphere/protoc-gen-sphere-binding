@@ -4,6 +4,6 @@ go 1.23.0
 
 require (
 	github.com/fatih/structtag v1.2.0
-	github.com/go-sphere/binding v0.0.2
+	github.com/go-sphere/binding v0.0.3
 	google.golang.org/protobuf v1.36.8
 )
