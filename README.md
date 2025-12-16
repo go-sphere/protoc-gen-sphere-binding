@@ -57,9 +57,11 @@ The plugin works in conjunction with `protoc-gen-go` and should be run after the
 
 The plugin supports the following binding locations through the `sphere.binding.location` annotation:
 
-- `BINDING_LOCATION_BODY`: Fields bound to JSON request body (default behavior)
-- `BINDING_LOCATION_QUERY`: Fields bound to query parameters (adds `form` tag)
+- `BINDING_LOCATION_JSON`: Fields bound to JSON request body (default behavior)
+- `BINDING_LOCATION_QUERY`: Fields bound to query parameters (adds `query` tag)
 - `BINDING_LOCATION_URI`: Fields bound to URI path parameters (adds `uri` tag, removes `json` tag)
+- `BINDING_LOCATION_FORM`: Fields bound to form parameters (adds `form` tag)
+- `BINDING_LOCATION_HEADER`: Fields bound to HTTP headers (adds `header` tag,
 
 ## Proto Definition Example
 
@@ -226,8 +228,9 @@ message DatabaseModel {
 
 - `BINDING_LOCATION_URI` and `BINDING_LOCATION_QUERY`: Removes `json` tag and adds respective binding tag
 - `BINDING_LOCATION_HEADER`: Removes `json` tag and adds `header` tag  
+- `BINDING_LOCATION_QUERY`: Removes `json` tag and adds `query` tag
 - `BINDING_LOCATION_FORM`: Removes `json` tag and adds `form` tag
-- `BINDING_LOCATION_BODY`: Keeps original `json` tag (default behavior)
+- `BINDING_LOCATION_JSON`: No changes
 
 ## Integration with protoc-gen-sphere
 
