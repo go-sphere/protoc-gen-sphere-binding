@@ -162,11 +162,10 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 
 	// Add sphere binding tags
 	noJsonBinding := map[binding.BindingLocation]string{
-		binding.BindingLocation_BINDING_LOCATION_UNSPECIFIED: "",
-		binding.BindingLocation_BINDING_LOCATION_QUERY:       "query",
-		binding.BindingLocation_BINDING_LOCATION_URI:         "uri",
-		binding.BindingLocation_BINDING_LOCATION_FORM:        "form",
-		binding.BindingLocation_BINDING_LOCATION_HEADER:      "header",
+		binding.BindingLocation_BINDING_LOCATION_QUERY:  "query",
+		binding.BindingLocation_BINDING_LOCATION_URI:    "uri",
+		binding.BindingLocation_BINDING_LOCATION_FORM:   "form",
+		binding.BindingLocation_BINDING_LOCATION_HEADER: "header",
 	}
 	if tag, ok := noJsonBinding[location]; ok {
 		if tag != "" {
