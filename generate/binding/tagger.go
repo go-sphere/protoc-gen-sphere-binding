@@ -17,6 +17,7 @@ import (
 
 type Config struct {
 	AutoRemoveJson bool
+	BindingAliases map[string][]string
 }
 
 func GenerateFile(file *protogen.File, out string, config *Config) error {
@@ -174,6 +175,16 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 				Name:    string(field.Desc.Name()),
 				Options: nil,
 			})
+			aliases, exist := config.BindingAliases[tag]
+			if exist {
+				for _, alias := range aliases {
+					_ = fieldTags.Set(&structtag.Tag{
+						Key:     alias,
+						Name:    string(field.Desc.Name()),
+						Options: nil,
+					})
+				}
+			}
 		}
 		if config.AutoRemoveJson {
 			_ = fieldTags.Set(&structtag.Tag{
