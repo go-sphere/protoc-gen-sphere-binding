@@ -28,12 +28,14 @@ func main() {
 	}.Run(func(gen *protogen.Plugin) error {
 		gen.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
 		aliases := make(map[string][]string)
-		for _, alias := range strings.Split(*bindingAliases, ",") {
-			kv := strings.Split(alias, "=")
-			if len(kv) != 2 {
-				return fmt.Errorf("invalid binding alias: %s", alias)
+		if *bindingAliases != "" {
+			for _, alias := range strings.Split(*bindingAliases, ",") {
+				kv := strings.Split(alias, "=")
+				if len(kv) != 2 {
+					return fmt.Errorf("invalid binding alias: %s", alias)
+				}
+				aliases[kv[0]] = append(aliases[kv[0]], kv[1])
 			}
-			aliases[kv[0]] = append(aliases[kv[0]], kv[1])
 		}
 		for _, f := range gen.Files {
 			if !f.Generate {
