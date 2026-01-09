@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/go-sphere/protoc-gen-sphere-binding/generate/binding"
 	"google.golang.org/protobuf/compiler/protogen"
@@ -28,49 +27,21 @@ func main() {
 	}.Run(func(gen *protogen.Plugin) error {
 		gen.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
 
-		aliases := make(map[string][]string)
-		if *bindingAliases != "" {
-			for _, alias := range strings.Split(*bindingAliases, ",") {
-				alias = strings.TrimSpace(alias)
-				if len(alias) == 0 {
-					continue
-				}
-
-				kv := strings.Split(alias, "=")
-				if len(kv) != 2 {
-					return fmt.Errorf("invalid binding alias format '%s': expected 'key=value'", alias)
-				}
-
-				key := strings.TrimSpace(kv[0])
-				value := strings.TrimSpace(kv[1])
-
-				if len(key) == 0 {
-					return fmt.Errorf("invalid binding alias '%s': key cannot be empty", alias)
-				}
-				if strings.ContainsAny(key, " \t\n\r`:\"") {
-					return fmt.Errorf("invalid binding alias key '%s': contains illegal characters", key)
-				}
-
-				if len(value) == 0 {
-					return fmt.Errorf("invalid binding alias '%s': value cannot be empty", alias)
-				}
-				if strings.ContainsAny(value, " \t\n\r`:\"") {
-					return fmt.Errorf("invalid binding alias value '%s': contains illegal characters", value)
-				}
-
-				aliases[key] = append(aliases[key], value)
-			}
+		aliases, err := binding.ParseBindingAliases(*bindingAliases)
+		if err != nil {
+			return err
 		}
+
 		for _, f := range gen.Files {
 			if !f.Generate {
 				continue
 			}
-			err := binding.GenerateFile(f, *out, &binding.Config{
+			bErr := binding.GenerateFile(f, *out, &binding.Config{
 				AutoRemoveJson: *autoRemoveJson,
 				BindingAliases: aliases,
 			})
-			if err != nil {
-				return err
+			if bErr != nil {
+				return bErr
 			}
 		}
 		return nil

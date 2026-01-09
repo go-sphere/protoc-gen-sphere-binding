@@ -17,14 +17,94 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+var noJsonBinding = map[binding.BindingLocation]string{
+	binding.BindingLocation_BINDING_LOCATION_QUERY:  "query",
+	binding.BindingLocation_BINDING_LOCATION_URI:    "uri",
+	binding.BindingLocation_BINDING_LOCATION_FORM:   "form",
+	binding.BindingLocation_BINDING_LOCATION_HEADER: "header",
+}
+
 type Config struct {
 	AutoRemoveJson bool
 	BindingAliases map[string][]string
 }
 
+// ValidateTagKey validates if a tag key is valid for Go struct tags
+func ValidateTagKey(key string) error {
+	if len(key) == 0 {
+		return fmt.Errorf("tag key cannot be empty")
+	}
+	if strings.ContainsAny(key, " \t\n\r`:\"") {
+		return fmt.Errorf("tag key '%s' contains illegal characters", key)
+	}
+	return nil
+}
+
+// ParseBindingAliases parses and validates binding aliases from a comma-separated string
+func ParseBindingAliases(aliasStr string) (map[string][]string, error) {
+	aliases := make(map[string][]string)
+	if aliasStr == "" {
+		return aliases, nil
+	}
+
+	for _, alias := range strings.Split(aliasStr, ",") {
+		alias = strings.TrimSpace(alias)
+		if len(alias) == 0 {
+			continue
+		}
+
+		kv := strings.Split(alias, "=")
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("invalid binding alias format '%s': expected 'key=value'", alias)
+		}
+
+		key := strings.TrimSpace(kv[0])
+		value := strings.TrimSpace(kv[1])
+
+		if err := ValidateTagKey(key); err != nil {
+			return nil, fmt.Errorf("invalid binding alias '%s': %w", alias, err)
+		}
+
+		if err := ValidateTagKey(value); err != nil {
+			return nil, fmt.Errorf("invalid binding alias '%s': %w", alias, err)
+		}
+
+		aliases[key] = append(aliases[key], value)
+	}
+
+	return aliases, nil
+}
+
 func GenerateFile(file *protogen.File, out string, config *Config) error {
 	err := generateFile(file, out, config)
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// writeFileAtomic writes data to a file atomically using temp file + rename
+func writeFileAtomic(filename string, data []byte, perm os.FileMode) error {
+	tempFile, cErr := os.CreateTemp(filepath.Dir(filename), ".tmp-*.pb.go")
+	if cErr != nil {
+		return cErr
+	}
+	tempName := tempFile.Name()
+	defer func() {
+		_ = os.Remove(tempName)
+	}()
+	if _, err := tempFile.Write(data); err != nil {
+		_ = tempFile.Close()
+		return err
+	}
+	if err := tempFile.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tempName, perm); err != nil {
+		return err
+	}
+
+	if err := os.Rename(tempName, filename); err != nil {
 		return err
 	}
 	return nil
@@ -80,31 +160,7 @@ func generateFile(file *protogen.File, out string, config *Config) error {
 		return err
 	}
 
-	// Atomic write: temp file + rename
-	tempFile, err := os.CreateTemp(filepath.Dir(filename), ".tmp-*.pb.go")
-	if err != nil {
-		return err
-	}
-	tempName := tempFile.Name()
-	defer os.Remove(tempName)
-
-	if _, err := tempFile.Write(source); err != nil {
-		tempFile.Close()
-		return err
-	}
-	if err := tempFile.Close(); err != nil {
-		return err
-	}
-
-	if err := os.Chmod(tempName, originalPerm); err != nil {
-		return err
-	}
-
-	if err := os.Rename(tempName, filename); err != nil {
-		return err
-	}
-
-	return nil
+	return writeFileAtomic(filename, source, originalPerm)
 }
 
 func extractFile(file *protogen.File, config *Config) (StructTags, error) {
@@ -224,12 +280,6 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 	}
 
 	// Add sphere binding tags
-	noJsonBinding := map[binding.BindingLocation]string{
-		binding.BindingLocation_BINDING_LOCATION_QUERY:  "query",
-		binding.BindingLocation_BINDING_LOCATION_URI:    "uri",
-		binding.BindingLocation_BINDING_LOCATION_FORM:   "form",
-		binding.BindingLocation_BINDING_LOCATION_HEADER: "header",
-	}
 	if tag, ok := noJsonBinding[location]; ok {
 		if len(tag) > 0 {
 			_ = fieldTags.Set(&structtag.Tag{
