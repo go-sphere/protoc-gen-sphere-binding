@@ -11,7 +11,19 @@ import (
 
 type StructTags map[string]map[string]*structtag.Tags
 
+// ReTagsWithCheck modifies tags and detects actual changes
+func ReTagsWithCheck(file *ast.File, tags StructTags, changed *bool) error {
+	if changed != nil {
+		*changed = false
+	}
+	return reTagsInternal(file, tags, changed)
+}
+
 func ReTags(file *ast.File, tags StructTags) error {
+	return reTagsInternal(file, tags, nil)
+}
+
+func reTagsInternal(file *ast.File, tags StructTags, changed *bool) error {
 	for _, decl := range file.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok {
@@ -57,13 +69,21 @@ func ReTags(file *ast.File, tags StructTags) error {
 					return parseErr
 				}
 
+				originalTagValue := oldTags.String()
+
 				sort.Stable(newTags)
 				for _, t := range newTags.Tags() {
 					if setErr := oldTags.Set(t); setErr != nil {
 						return setErr
 					}
 				}
-				field.Tag.Value = "`" + oldTags.String() + "`"
+				newTagValue := oldTags.String()
+
+				if changed != nil && originalTagValue != newTagValue {
+					*changed = true
+				}
+
+				field.Tag.Value = "`" + newTagValue + "`"
 			}
 		}
 	}

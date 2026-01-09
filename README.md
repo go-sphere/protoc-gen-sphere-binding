@@ -14,12 +14,14 @@ go install github.com/go-sphere/protoc-gen-sphere-binding@latest
 ## Flags
 The behavior of `protoc-gen-sphere-binding` can be customized with the following parameters:
 - **`version`**: Print the current plugin version and exit. (Default: `false`)
-- **`out`**: The output directory for the modified `.proto` files. (Default: `api`)
+- **`out`**: The output directory for the modified `.pb.go` files. (Default: `api`)
+- **`auto_remove_json`**: Automatically remove json tag when sphere binding location is set. (Default: `true`)
+- **`binding_aliases`**: Add additional tag aliases for any binding tag. Format: `tag1=alias1,tag2=alias2`. Example: `query=form,uri=path,db=database`. (Default: `""`)
 
 
 ## Usage with Buf
 
-To use `protoc-gen-sphere-binding` with `buf`, you can configure it in your `buf.binding.yaml` file. `protoc-gen-sphere-binding` can not be used with `buf.gen.yaml` because it does not generate Go code, but rather modifies the `.proto` files to include Sphere binding tags. Here is an example configuration:
+To use `protoc-gen-sphere-binding` with `buf`, you can configure it in your `buf.binding.yaml` file. `protoc-gen-sphere-binding` cannot be used with the standard `buf.gen.yaml` because it does not generate new Go code files, but rather modifies the generated `.pb.go` files to add binding tags after `protoc-gen-go` has run. Here is an example configuration:
 
 ```yaml
 version: v2
@@ -58,10 +60,10 @@ The plugin works in conjunction with `protoc-gen-go` and should be run after the
 The plugin supports the following binding locations through the `sphere.binding.location` annotation:
 
 - `BINDING_LOCATION_JSON`: Fields bound to JSON request body (default behavior)
-- `BINDING_LOCATION_QUERY`: Fields bound to query parameters (adds `query` tag)
+- `BINDING_LOCATION_QUERY`: Fields bound to query parameters (adds `query` tag, removes `json` tag)
 - `BINDING_LOCATION_URI`: Fields bound to URI path parameters (adds `uri` tag, removes `json` tag)
-- `BINDING_LOCATION_FORM`: Fields bound to form parameters (adds `form` tag)
-- `BINDING_LOCATION_HEADER`: Fields bound to HTTP headers (adds `header` tag,
+- `BINDING_LOCATION_FORM`: Fields bound to form parameters (adds `form` tag, removes `json` tag)
+- `BINDING_LOCATION_HEADER`: Fields bound to HTTP headers (adds `header` tag, removes `json` tag)
 
 ## Proto Definition Example
 
@@ -143,12 +145,12 @@ type RunTestRequest struct {
     PathTest1     string                 `protobuf:"bytes,3,opt,name=path_test1,json=pathTest1,proto3" json:"-" uri:"path_test1"`
     PathTest2     int64                  `protobuf:"varint,4,opt,name=path_test2,json=pathTest2,proto3" json:"-" uri:"path_test2"`
     
-    // Query parameters (json tag removed, form tag added)
-    QueryTest1    string                 `protobuf:"bytes,5,opt,name=query_test1,json=queryTest1,proto3" json:"-" form:"query_test1"`
-    QueryTest2    int64                  `protobuf:"varint,6,opt,name=query_test2,json=queryTest2,proto3" json:"-" form:"query_test2"`
+    // Query parameters (json tag removed, query tag added)
+    QueryTest1    string                 `protobuf:"bytes,5,opt,name=query_test1,json=queryTest1,proto3" json:"-" query:"query_test1"`
+    QueryTest2    int64                  `protobuf:"varint,6,opt,name=query_test2,json=queryTest2,proto3" json:"-" query:"query_test2"`
     
     // Query parameter with custom sphere tag
-    EnumTest1     []TestEnum             `protobuf:"varint,7,rep,packed,name=enum_test1,json=enumTest1,proto3,enum=shared.v1.TestEnum" json:"-" form:"enum_test1" sphere:"enum_test1"`
+    EnumTest1     []TestEnum             `protobuf:"varint,7,rep,packed,name=enum_test1,json=enumTest1,proto3,enum=shared.v1.TestEnum" json:"-" query:"enum_test1" sphere:"enum_test1"`
     
     // Header binding
     AuthToken     string                 `protobuf:"bytes,8,opt,name=auth_token,json=authToken,proto3" json:"-" header:"auth_token"`
@@ -226,11 +228,13 @@ message DatabaseModel {
 
 ### Tag Override Behavior
 
-- `BINDING_LOCATION_URI` and `BINDING_LOCATION_QUERY`: Removes `json` tag and adds respective binding tag
-- `BINDING_LOCATION_HEADER`: Removes `json` tag and adds `header` tag  
+When `auto_remove_json` is `true` (default):
+
+- `BINDING_LOCATION_URI`: Removes `json` tag and adds `uri` tag
 - `BINDING_LOCATION_QUERY`: Removes `json` tag and adds `query` tag
+- `BINDING_LOCATION_HEADER`: Removes `json` tag and adds `header` tag
 - `BINDING_LOCATION_FORM`: Removes `json` tag and adds `form` tag
-- `BINDING_LOCATION_JSON`: No changes
+- `BINDING_LOCATION_JSON`: No changes (keeps `json` tag)
 
 ## Integration with protoc-gen-sphere
 

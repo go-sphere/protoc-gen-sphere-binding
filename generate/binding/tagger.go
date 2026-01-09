@@ -1,6 +1,8 @@
 package binding
 
 import (
+	"bytes"
+	"fmt"
 	"go/format"
 	"go/parser"
 	"go/printer"
@@ -37,7 +39,19 @@ func generateFile(file *protogen.File, out string, config *Config) error {
 		return nil
 	}
 
+	// Validate output path to prevent path traversal
+	out = filepath.Clean(out)
 	filename := filepath.Join(out, file.GeneratedFilenamePrefix+".pb.go")
+	if !strings.HasPrefix(filepath.Clean(filename), out) {
+		return fmt.Errorf("invalid file path: potential path traversal")
+	}
+
+	// Preserve original file permissions
+	originalInfo, err := os.Stat(filename)
+	if err != nil {
+		return err
+	}
+	originalPerm := originalInfo.Mode().Perm()
 
 	fs := token.NewFileSet()
 	fn, err := parser.ParseFile(fs, filename, nil, parser.ParseComments)
@@ -45,26 +59,51 @@ func generateFile(file *protogen.File, out string, config *Config) error {
 		return err
 	}
 
-	err = ReTags(fn, tags)
+	// Skip if no actual changes needed
+	changed := false
+	err = ReTagsWithCheck(fn, tags, &changed)
 	if err != nil {
 		return err
 	}
+	if !changed {
+		return nil
+	}
 
-	var buf strings.Builder
+	var buf bytes.Buffer
 	err = printer.Fprint(&buf, fs, fn)
 	if err != nil {
 		return err
 	}
 
-	source, err := format.Source([]byte(buf.String()))
+	source, err := format.Source(buf.Bytes())
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(filename, source, 0o644)
+	// Atomic write: temp file + rename
+	tempFile, err := os.CreateTemp(filepath.Dir(filename), ".tmp-*.pb.go")
 	if err != nil {
 		return err
 	}
+	tempName := tempFile.Name()
+	defer os.Remove(tempName)
+
+	if _, err := tempFile.Write(source); err != nil {
+		tempFile.Close()
+		return err
+	}
+	if err := tempFile.Close(); err != nil {
+		return err
+	}
+
+	if err := os.Chmod(tempName, originalPerm); err != nil {
+		return err
+	}
+
+	if err := os.Rename(tempName, filename); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -84,17 +123,37 @@ func extractFile(file *protogen.File, config *Config) (StructTags, error) {
 	return tags, nil
 }
 
+// getLocationAndAutoTags extracts location and autoTags from options
+func getLocationAndAutoTags(hasLocation bool, locationValue binding.BindingLocation,
+	hasAutoTags bool, autoTagsValue []string,
+	defaultLocation binding.BindingLocation, defaultAutoTags []string) (binding.BindingLocation, []string) {
+
+	location := defaultLocation
+	if hasLocation {
+		location = locationValue
+	}
+
+	autoTags := defaultAutoTags
+	if hasAutoTags {
+		autoTags = autoTagsValue
+	}
+
+	return location, autoTags
+}
+
 func extractMessage(message *protogen.Message, location binding.BindingLocation, autoTags []string, config *Config) (StructTags, error) {
 	tags := make(StructTags)
 
-	if proto.HasExtension(message.Desc.Options(), binding.E_DefaultLocation) {
-		location = proto.GetExtension(message.Desc.Options(), binding.E_DefaultLocation).(binding.BindingLocation)
-	}
-	if proto.HasExtension(message.Desc.Options(), binding.E_DefaultAutoTags) {
-		autoTags = proto.GetExtension(message.Desc.Options(), binding.E_DefaultAutoTags).([]string)
-	}
+	location, autoTags = getLocationAndAutoTags(
+		proto.HasExtension(message.Desc.Options(), binding.E_DefaultLocation),
+		proto.GetExtension(message.Desc.Options(), binding.E_DefaultLocation).(binding.BindingLocation),
+		proto.HasExtension(message.Desc.Options(), binding.E_DefaultAutoTags),
+		proto.GetExtension(message.Desc.Options(), binding.E_DefaultAutoTags).([]string),
+		location, autoTags,
+	)
 
 	messageTags := make(map[string]*structtag.Tags)
+
 	// process fields
 	for _, field := range message.Fields {
 		fieldTags, err := extractField(field, location, autoTags, config)
@@ -105,18 +164,19 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 			messageTags[field.GoName] = fieldTags
 		}
 	}
+
 	// process one_of
 	for _, oneOf := range message.Oneofs {
-		defaultOneOfBindingLocation := location
-		defaultOneOfAutoTags := autoTags
-		if proto.HasExtension(oneOf.Desc.Options(), binding.E_DefaultOneofLocation) {
-			defaultOneOfBindingLocation = proto.GetExtension(oneOf.Desc.Options(), binding.E_DefaultOneofLocation).(binding.BindingLocation)
-		}
-		if proto.HasExtension(oneOf.Desc.Options(), binding.E_DefaultOneofAutoTags) {
-			defaultOneOfAutoTags = proto.GetExtension(oneOf.Desc.Options(), binding.E_DefaultOneofAutoTags).([]string)
-		}
+		oneOfLocation, oneOfAutoTags := getLocationAndAutoTags(
+			proto.HasExtension(oneOf.Desc.Options(), binding.E_DefaultOneofLocation),
+			proto.GetExtension(oneOf.Desc.Options(), binding.E_DefaultOneofLocation).(binding.BindingLocation),
+			proto.HasExtension(oneOf.Desc.Options(), binding.E_DefaultOneofAutoTags),
+			proto.GetExtension(oneOf.Desc.Options(), binding.E_DefaultOneofAutoTags).([]string),
+			location, autoTags,
+		)
+
 		for _, field := range oneOf.Fields {
-			fieldTags, err := extractField(field, defaultOneOfBindingLocation, defaultOneOfAutoTags, config)
+			fieldTags, err := extractField(field, oneOfLocation, oneOfAutoTags, config)
 			if err != nil {
 				return nil, err
 			}
@@ -125,6 +185,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 			}
 		}
 	}
+
 	// process nested messages
 	for _, nested := range message.Messages {
 		extraTags, err := extractMessage(nested, location, autoTags, config)
@@ -141,24 +202,25 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 }
 
 func extractField(field *protogen.Field, location binding.BindingLocation, autoTags []string, config *Config) (*structtag.Tags, error) {
-	if proto.HasExtension(field.Desc.Options(), binding.E_Location) {
-		location = proto.GetExtension(field.Desc.Options(), binding.E_Location).(binding.BindingLocation)
-	}
-	if proto.HasExtension(field.Desc.Options(), binding.E_AutoTags) {
-		autoTags = proto.GetExtension(field.Desc.Options(), binding.E_AutoTags).([]string)
-	}
+	location, autoTags = getLocationAndAutoTags(
+		proto.HasExtension(field.Desc.Options(), binding.E_Location),
+		proto.GetExtension(field.Desc.Options(), binding.E_Location).(binding.BindingLocation),
+		proto.HasExtension(field.Desc.Options(), binding.E_AutoTags),
+		proto.GetExtension(field.Desc.Options(), binding.E_AutoTags).([]string),
+		location, autoTags,
+	)
+
 	fieldTags := &structtag.Tags{}
 
 	// Add auto tags
 	for _, tag := range autoTags {
-		if tag == "" {
-			continue
+		if len(tag) > 0 {
+			_ = fieldTags.Set(&structtag.Tag{
+				Key:     tag,
+				Name:    string(field.Desc.Name()),
+				Options: nil,
+			})
 		}
-		_ = fieldTags.Set(&structtag.Tag{
-			Key:     tag,
-			Name:    string(field.Desc.Name()),
-			Options: nil,
-		})
 	}
 
 	// Add sphere binding tags
@@ -169,20 +231,21 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 		binding.BindingLocation_BINDING_LOCATION_HEADER: "header",
 	}
 	if tag, ok := noJsonBinding[location]; ok {
-		if tag != "" {
+		if len(tag) > 0 {
 			_ = fieldTags.Set(&structtag.Tag{
 				Key:     tag,
 				Name:    string(field.Desc.Name()),
 				Options: nil,
 			})
-			aliases, exist := config.BindingAliases[tag]
-			if exist {
+			if aliases, exist := config.BindingAliases[tag]; exist {
 				for _, alias := range aliases {
-					_ = fieldTags.Set(&structtag.Tag{
-						Key:     alias,
-						Name:    string(field.Desc.Name()),
-						Options: nil,
-					})
+					if len(alias) > 0 {
+						_ = fieldTags.Set(&structtag.Tag{
+							Key:     alias,
+							Name:    string(field.Desc.Name()),
+							Options: nil,
+						})
+					}
 				}
 			}
 		}
@@ -195,10 +258,13 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 		}
 	}
 
-	// Add manual tags
+	// Manual tags override all previous settings
 	if proto.HasExtension(field.Desc.Options(), binding.E_Tags) {
 		tags := proto.GetExtension(field.Desc.Options(), binding.E_Tags).([]string)
 		for _, tag := range tags {
+			if len(tag) == 0 {
+				continue
+			}
 			parse, err := structtag.Parse(tag)
 			if err != nil {
 				return nil, err
