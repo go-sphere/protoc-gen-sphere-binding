@@ -30,60 +30,56 @@ func reTagsInternal(file *ast.File, tags StructTags, changed *bool) error {
 			continue
 		}
 
-		var typeSpec *ast.TypeSpec
 		for _, spec := range genDecl.Specs {
-			if ts, tsOK := spec.(*ast.TypeSpec); tsOK {
-				typeSpec = ts
-				break
+			typeSpec, tsOK := spec.(*ast.TypeSpec)
+			if !tsOK {
+				continue
 			}
-		}
-		if typeSpec == nil {
-			continue
-		}
 
-		structDecl, ok := typeSpec.Type.(*ast.StructType)
-		if !ok {
-			continue
-		}
+			structDecl, isStruct := typeSpec.Type.(*ast.StructType)
+			if !isStruct {
+				continue
+			}
 
-		structName := typeSpec.Name.String()
-		fieldsToRetag, structFound := tags[structName]
-		if !structFound {
-			continue
-		}
+			structName := typeSpec.Name.String()
+			fieldsToRetag, structFound := tags[structName]
+			if !structFound {
+				continue
+			}
 
-		for _, field := range structDecl.Fields.List {
-			for _, fieldName := range field.Names {
-				newTags, fieldFound := fieldsToRetag[fieldName.String()]
-				if !fieldFound || newTags == nil {
-					continue
-				}
-
-				if field.Tag == nil {
-					field.Tag = &ast.BasicLit{Kind: token.STRING}
-				}
-
-				currentTagValue := strings.Trim(field.Tag.Value, "`")
-				oldTags, parseErr := structtag.Parse(currentTagValue)
-				if parseErr != nil {
-					return parseErr
-				}
-
-				originalTagValue := oldTags.String()
-
-				sort.Stable(newTags)
-				for _, t := range newTags.Tags() {
-					if setErr := oldTags.Set(t); setErr != nil {
-						return setErr
+			for _, field := range structDecl.Fields.List {
+				for _, fieldName := range field.Names {
+					newTags, fieldFound := fieldsToRetag[fieldName.String()]
+					if !fieldFound || newTags == nil {
+						continue
 					}
-				}
-				newTagValue := oldTags.String()
 
-				if changed != nil && originalTagValue != newTagValue {
-					*changed = true
-				}
+					if field.Tag == nil {
+						field.Tag = &ast.BasicLit{Kind: token.STRING}
+					}
 
-				field.Tag.Value = "`" + newTagValue + "`"
+					currentTagValue := strings.Trim(field.Tag.Value, "`")
+					oldTags, parseErr := structtag.Parse(currentTagValue)
+					if parseErr != nil {
+						return parseErr
+					}
+
+					originalTagValue := oldTags.String()
+
+					sort.Stable(newTags)
+					for _, t := range newTags.Tags() {
+						if setErr := oldTags.Set(t); setErr != nil {
+							return setErr
+						}
+					}
+					newTagValue := oldTags.String()
+
+					if changed != nil && originalTagValue != newTagValue {
+						*changed = true
+					}
+
+					field.Tag.Value = "`" + newTagValue + "`"
+				}
 			}
 		}
 	}

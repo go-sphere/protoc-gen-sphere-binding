@@ -16,6 +16,7 @@ import (
 	"github.com/go-sphere/binding/sphere/binding"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var noJsonBinding = map[binding.BindingLocation]string{
@@ -123,7 +124,11 @@ func generateFile(file *protogen.File, out string, config *Config) error {
 	// Validate output path to prevent path traversal
 	out = filepath.Clean(out)
 	filename := filepath.Join(out, file.GeneratedFilenamePrefix+".pb.go")
-	if !strings.HasPrefix(filepath.Clean(filename), out) {
+	rel, err := filepath.Rel(out, filepath.Clean(filename))
+	if err != nil {
+		return err
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return fmt.Errorf("invalid file path: potential path traversal")
 	}
 
@@ -180,33 +185,55 @@ func extractFile(file *protogen.File, config *Config) (StructTags, error) {
 	return tags, nil
 }
 
-// getLocationAndAutoTags extracts location and autoTags from options
-func getLocationAndAutoTags(hasLocation bool, locationValue binding.BindingLocation,
-	hasAutoTags bool, autoTagsValue []string,
-	defaultLocation binding.BindingLocation, defaultAutoTags []string) (binding.BindingLocation, []string) {
-
+func resolveLocationAndAutoTags(
+	options proto.Message,
+	locationExt protoreflect.ExtensionType,
+	autoTagsExt protoreflect.ExtensionType,
+	defaultLocation binding.BindingLocation,
+	defaultAutoTags []string,
+) (binding.BindingLocation, []string) {
 	location := defaultLocation
-	if hasLocation {
-		location = locationValue
+	if proto.HasExtension(options, locationExt) {
+		location = proto.GetExtension(options, locationExt).(binding.BindingLocation)
 	}
 
 	autoTags := defaultAutoTags
-	if hasAutoTags {
-		autoTags = autoTagsValue
+	if proto.HasExtension(options, autoTagsExt) {
+		autoTags = proto.GetExtension(options, autoTagsExt).([]string)
 	}
 
 	return location, autoTags
 }
 
+func setTag(tags *structtag.Tags, key, name string) error {
+	if key == "" {
+		return nil
+	}
+	return tags.Set(&structtag.Tag{
+		Key:     key,
+		Name:    name,
+		Options: nil,
+	})
+}
+
+func setTagsByKeys(tags *structtag.Tags, keys []string, name string) error {
+	for _, key := range keys {
+		if err := setTag(tags, key, name); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func extractMessage(message *protogen.Message, location binding.BindingLocation, autoTags []string, config *Config) (StructTags, error) {
 	tags := make(StructTags)
 
-	location, autoTags = getLocationAndAutoTags(
-		proto.HasExtension(message.Desc.Options(), binding.E_DefaultLocation),
-		proto.GetExtension(message.Desc.Options(), binding.E_DefaultLocation).(binding.BindingLocation),
-		proto.HasExtension(message.Desc.Options(), binding.E_DefaultAutoTags),
-		proto.GetExtension(message.Desc.Options(), binding.E_DefaultAutoTags).([]string),
-		location, autoTags,
+	location, autoTags = resolveLocationAndAutoTags(
+		message.Desc.Options(),
+		binding.E_DefaultLocation,
+		binding.E_DefaultAutoTags,
+		location,
+		autoTags,
 	)
 
 	messageTags := make(map[string]*structtag.Tags)
@@ -224,12 +251,12 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 
 	// process one_of
 	for _, oneOf := range message.Oneofs {
-		oneOfLocation, oneOfAutoTags := getLocationAndAutoTags(
-			proto.HasExtension(oneOf.Desc.Options(), binding.E_DefaultOneofLocation),
-			proto.GetExtension(oneOf.Desc.Options(), binding.E_DefaultOneofLocation).(binding.BindingLocation),
-			proto.HasExtension(oneOf.Desc.Options(), binding.E_DefaultOneofAutoTags),
-			proto.GetExtension(oneOf.Desc.Options(), binding.E_DefaultOneofAutoTags).([]string),
-			location, autoTags,
+		oneOfLocation, oneOfAutoTags := resolveLocationAndAutoTags(
+			oneOf.Desc.Options(),
+			binding.E_DefaultOneofLocation,
+			binding.E_DefaultOneofAutoTags,
+			location,
+			autoTags,
 		)
 
 		for _, field := range oneOf.Fields {
@@ -257,53 +284,36 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 }
 
 func extractField(field *protogen.Field, location binding.BindingLocation, autoTags []string, config *Config) (*structtag.Tags, error) {
-	location, autoTags = getLocationAndAutoTags(
-		proto.HasExtension(field.Desc.Options(), binding.E_Location),
-		proto.GetExtension(field.Desc.Options(), binding.E_Location).(binding.BindingLocation),
-		proto.HasExtension(field.Desc.Options(), binding.E_AutoTags),
-		proto.GetExtension(field.Desc.Options(), binding.E_AutoTags).([]string),
-		location, autoTags,
+	location, autoTags = resolveLocationAndAutoTags(
+		field.Desc.Options(),
+		binding.E_Location,
+		binding.E_AutoTags,
+		location,
+		autoTags,
 	)
 
 	fieldTags := &structtag.Tags{}
+	fieldName := string(field.Desc.Name())
 
 	// Add auto tags
-	for _, tag := range autoTags {
-		if len(tag) > 0 {
-			_ = fieldTags.Set(&structtag.Tag{
-				Key:     tag,
-				Name:    string(field.Desc.Name()),
-				Options: nil,
-			})
-		}
+	if err := setTagsByKeys(fieldTags, autoTags, fieldName); err != nil {
+		return nil, err
 	}
 
 	// Add sphere binding tags
 	if tag, ok := noJsonBinding[location]; ok {
-		if len(tag) > 0 {
-			_ = fieldTags.Set(&structtag.Tag{
-				Key:     tag,
-				Name:    string(field.Desc.Name()),
-				Options: nil,
-			})
-			if aliases, exist := config.BindingAliases[tag]; exist {
-				for _, alias := range aliases {
-					if len(alias) > 0 {
-						_ = fieldTags.Set(&structtag.Tag{
-							Key:     alias,
-							Name:    string(field.Desc.Name()),
-							Options: nil,
-						})
-					}
-				}
+		if err := setTag(fieldTags, tag, fieldName); err != nil {
+			return nil, err
+		}
+		if aliases, exist := config.BindingAliases[tag]; exist {
+			if err := setTagsByKeys(fieldTags, aliases, fieldName); err != nil {
+				return nil, err
 			}
 		}
 		if config.AutoRemoveJson {
-			_ = fieldTags.Set(&structtag.Tag{
-				Key:     "json",
-				Name:    "-",
-				Options: nil,
-			})
+			if err := setTag(fieldTags, "json", "-"); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -319,7 +329,9 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 				return nil, err
 			}
 			for _, t := range parse.Tags() {
-				_ = fieldTags.Set(t)
+				if err = fieldTags.Set(t); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
