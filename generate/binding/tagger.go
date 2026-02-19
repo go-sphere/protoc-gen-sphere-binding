@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -248,9 +249,7 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 		if err != nil {
 			return nil, err
 		}
-		for name, tag := range extraTags {
-			tags[name] = tag
-		}
+		maps.Copy(tags, extraTags)
 	}
 
 	tags[message.GoIdent.GoName] = messageTags
