@@ -113,6 +113,10 @@ message RunTestRequest {
   string auth_token = 8 [(sphere.binding.location) = BINDING_LOCATION_HEADER];
 }
 
+message RunTestResponse {
+  string message = 1;
+}
+
 // Message with default auto tags
 message BodyPathTestRequest {
   message Request {
