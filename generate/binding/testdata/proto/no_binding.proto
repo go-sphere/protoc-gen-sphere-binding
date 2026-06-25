@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package testdata.nobinding.v1;
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/nobindingv1;nobindingv1";
+
+// NoBindingRequest has no sphere.binding options, so the plugin must leave the
+// generated struct tags untouched (no file is rewritten).
+message NoBindingRequest {
+  string name = 1;
+  int64 age = 2;
+}
+
+message NoBindingResponse {
+  string ok = 1;
+}

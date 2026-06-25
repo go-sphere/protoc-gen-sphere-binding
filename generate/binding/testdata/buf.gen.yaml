@@ -1,0 +1,9 @@
+version: v2
+plugins:
+  # protoc-gen-go produces the raw .pb.go that protoc-gen-sphere-binding reads
+  # and rewrites. The output under gen/ is the *input* fixture for the golden
+  # tests; the retagged result lives under golden/.
+  - local: protoc-gen-go
+    out: gen
+    opt:
+      - paths=source_relative

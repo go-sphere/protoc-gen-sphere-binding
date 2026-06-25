@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package testdata.basic.v1;
+
+import "sphere/binding/binding.proto";
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/basicv1;basicv1";
+
+// BasicRequest exercises the per-field location override together with a
+// message level default_location: fields without an explicit location fall back
+// to QUERY.
+message BasicRequest {
+  option (sphere.binding.default_location) = BINDING_LOCATION_QUERY;
+
+  string path_id = 1 [(sphere.binding.location) = BINDING_LOCATION_URI];
+  string header_token = 2 [(sphere.binding.location) = BINDING_LOCATION_HEADER];
+  string form_name = 3 [(sphere.binding.location) = BINDING_LOCATION_FORM];
+  // Falls back to the message default (QUERY).
+  string keyword = 4;
+  int64 page = 5;
+  // JSON location keeps the original json tag and adds nothing.
+  string body_note = 6 [(sphere.binding.location) = BINDING_LOCATION_JSON];
+}
+
+message BasicResponse {
+  string ok = 1;
+}

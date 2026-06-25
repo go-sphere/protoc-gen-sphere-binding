@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package testdata.oneof.v1;
+
+import "sphere/binding/binding.proto";
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/oneofv1;oneofv1";
+
+// OneofRequest exercises oneof level defaults plus nested messages, both of
+// which inherit the location/auto_tags from their enclosing scope.
+message OneofRequest {
+  option (sphere.binding.default_location) = BINDING_LOCATION_QUERY;
+
+  string outer = 1;
+
+  // NOTE: protoc-gen-go emits each oneof member in its own wrapper struct
+  // (OneofRequest_ByName), so the current plugin — which keys tags by the parent
+  // message struct — leaves these fields untouched. The golden file captures
+  // that behavior so any future fix shows up as a diff.
+  oneof selector {
+    option (sphere.binding.default_oneof_location) = BINDING_LOCATION_URI;
+    option (sphere.binding.default_oneof_auto_tags) = "validate";
+
+    string by_name = 2;
+    int64 by_id = 3;
+  }
+
+  // Nested message inherits the enclosing message location (QUERY).
+  message Filter {
+    string status = 1;
+    int64 limit = 2;
+  }
+
+  Filter filter = 4;
+}
+
+message OneofResponse {
+  string ok = 1;
+}

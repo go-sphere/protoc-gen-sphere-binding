@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package testdata.tags.v1;
+
+import "sphere/binding/binding.proto";
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/tagsv1;tagsv1";
+
+// TagsRequest exercises auto_tags and manual tags overrides.
+message TagsRequest {
+  // default_auto_tags applies the listed tag keys to every field in the message.
+  option (sphere.binding.default_auto_tags) = "validate";
+
+  // Inherits the default_auto_tags ("validate") only.
+  string name = 1;
+
+  // Manual tags win over everything: they overwrite the generated json/validate
+  // tags for this field.
+  string nickname = 2 [(sphere.binding.tags) = "json:\"nick\"", (sphere.binding.tags) = "validate:\"required\""];
+
+  // Field level auto_tags replaces the message default for this field.
+  string email = 3 [(sphere.binding.auto_tags) = "form"];
+
+  // Location plus auto_tags combine: uri tag + the inherited validate tag.
+  string id = 4 [(sphere.binding.location) = BINDING_LOCATION_URI];
+}
+
+message TagsResponse {
+  string ok = 1;
+}

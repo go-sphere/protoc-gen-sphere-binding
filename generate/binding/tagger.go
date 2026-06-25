@@ -1,15 +1,8 @@
 package binding
 
 import (
-	"bytes"
 	"fmt"
-	"go/format"
-	"go/parser"
-	"go/printer"
-	"go/token"
 	"maps"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/fatih/structtag"
@@ -29,6 +22,17 @@ var noJsonBinding = map[binding.BindingLocation]string{
 type Config struct {
 	AutoRemoveJson bool
 	BindingAliases map[string][]string
+}
+
+// DefaultConfig returns the configuration the plugin uses out of the box, i.e.
+// the same defaults main.go wires from its flags: json tags are removed for
+// non-JSON binding locations and no extra tag aliases are registered. Tests use
+// it so golden files stay representative of real output.
+func DefaultConfig() *Config {
+	return &Config{
+		AutoRemoveJson: true,
+		BindingAliases: map[string][]string{},
+	}
 }
 
 // ValidateTagKey validates if a tag key is valid for Go struct tags
@@ -77,98 +81,9 @@ func ParseBindingAliases(aliasStr string) (map[string][]string, error) {
 	return aliases, nil
 }
 
-func GenerateFile(file *protogen.File, out string, config *Config) error {
-	err := generateFile(file, out, config)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// writeFileAtomic writes data to a file atomically using temp file + rename
-func writeFileAtomic(filename string, data []byte, perm os.FileMode) error {
-	tempFile, cErr := os.CreateTemp(filepath.Dir(filename), ".tmp-*.pb.go")
-	if cErr != nil {
-		return cErr
-	}
-	tempName := tempFile.Name()
-	defer func() {
-		_ = os.Remove(tempName)
-	}()
-	if _, err := tempFile.Write(data); err != nil {
-		_ = tempFile.Close()
-		return err
-	}
-	if err := tempFile.Close(); err != nil {
-		return err
-	}
-	if err := os.Chmod(tempName, perm); err != nil {
-		return err
-	}
-
-	if err := os.Rename(tempName, filename); err != nil {
-		return err
-	}
-	return nil
-}
-
-func generateFile(file *protogen.File, out string, config *Config) error {
-	tags, err := extractFile(file, config)
-	if err != nil {
-		return err
-	}
-	if len(tags) == 0 {
-		return nil
-	}
-
-	// Validate output path to prevent path traversal
-	out = filepath.Clean(out)
-	filename := filepath.Join(out, file.GeneratedFilenamePrefix+".pb.go")
-	rel, err := filepath.Rel(out, filepath.Clean(filename))
-	if err != nil {
-		return err
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("invalid file path: potential path traversal")
-	}
-
-	// Preserve original file permissions
-	originalInfo, err := os.Stat(filename)
-	if err != nil {
-		return err
-	}
-	originalPerm := originalInfo.Mode().Perm()
-
-	fs := token.NewFileSet()
-	fn, err := parser.ParseFile(fs, filename, nil, parser.ParseComments)
-	if err != nil {
-		return err
-	}
-
-	// Skip if no actual changes needed
-	changed := false
-	err = ReTagsWithCheck(fn, tags, &changed)
-	if err != nil {
-		return err
-	}
-	if !changed {
-		return nil
-	}
-
-	var buf bytes.Buffer
-	err = printer.Fprint(&buf, fs, fn)
-	if err != nil {
-		return err
-	}
-
-	source, err := format.Source(buf.Bytes())
-	if err != nil {
-		return err
-	}
-
-	return writeFileAtomic(filename, source, originalPerm)
-}
-
+// extractFile walks every top-level message in file and collects the struct
+// tags that should be applied to the generated Go structs. It is pure: it only
+// reads the descriptor and never touches the filesystem.
 func extractFile(file *protogen.File, config *Config) (StructTags, error) {
 	tags := make(StructTags)
 	for _, message := range file.Messages {
