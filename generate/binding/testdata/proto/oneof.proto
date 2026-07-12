@@ -14,9 +14,9 @@ message OneofRequest {
   string outer = 1;
 
   // NOTE: protoc-gen-go emits each oneof member in its own wrapper struct
-  // (OneofRequest_ByName), so the current plugin — which keys tags by the parent
-  // message struct — leaves these fields untouched. The golden file captures
-  // that behavior so any future fix shows up as a diff.
+  // (OneofRequest_ByName), so the plugin keys the tags by that wrapper struct
+  // name. The golden file shows the uri/validate tags landing on the wrapper
+  // fields (OneofRequest_ByName.ByName, OneofRequest_ById.ById).
   oneof selector {
     option (sphere.binding.default_oneof_location) = BINDING_LOCATION_URI;
     option (sphere.binding.default_oneof_auto_tags) = "validate";

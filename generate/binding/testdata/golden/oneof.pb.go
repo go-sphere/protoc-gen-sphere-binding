@@ -28,9 +28,9 @@ type OneofRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Outer string                 `protobuf:"bytes,1,opt,name=outer,proto3" json:"-" query:"outer"`
 	// NOTE: protoc-gen-go emits each oneof member in its own wrapper struct
-	// (OneofRequest_ByName), so the current plugin — which keys tags by the parent
-	// message struct — leaves these fields untouched. The golden file captures
-	// that behavior so any future fix shows up as a diff.
+	// (OneofRequest_ByName), so the plugin keys the tags by that wrapper struct
+	// name. The golden file shows the uri/validate tags landing on the wrapper
+	// fields (OneofRequest_ByName.ByName, OneofRequest_ById.ById).
 	//
 	// Types that are valid to be assigned to Selector:
 	//
@@ -116,11 +116,11 @@ type isOneofRequest_Selector interface {
 }
 
 type OneofRequest_ByName struct {
-	ByName string `protobuf:"bytes,2,opt,name=by_name,json=byName,proto3,oneof"`
+	ByName string `protobuf:"bytes,2,opt,name=by_name,json=byName,proto3,oneof" json:"-" uri:"by_name" validate:"by_name"`
 }
 
 type OneofRequest_ById struct {
-	ById int64 `protobuf:"varint,3,opt,name=by_id,json=byId,proto3,oneof"`
+	ById int64 `protobuf:"varint,3,opt,name=by_id,json=byId,proto3,oneof" json:"-" uri:"by_id" validate:"by_id"`
 }
 
 func (*OneofRequest_ByName) isOneofRequest_Selector() {}
