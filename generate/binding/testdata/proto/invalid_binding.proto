@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package testdata.invalidbinding.v1;
+
+import "sphere/binding/binding.proto";
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/invalidbindingv1;invalidbindingv1";
+
+message Inner {
+  string a = 1;
+}
+
+// A message-typed field cannot be bound from a query token.
+message BadQueryMessage {
+  Inner inner = 1 [(sphere.binding.location) = BINDING_LOCATION_QUERY];
+}
+
+// A map field cannot be bound from a uri token.
+message BadUriMap {
+  map<string, string> m = 1 [(sphere.binding.location) = BINDING_LOCATION_URI];
+}
+
+// A bytes field cannot be bound from a header token.
+message BadHeaderBytes {
+  bytes data = 1 [(sphere.binding.location) = BINDING_LOCATION_HEADER];
+}
+
+// Control: scalar query/uri/header bindings are valid, and bytes may be bound to
+// FORM (form data can legitimately carry raw bytes / files).
+message GoodScalars {
+  string q = 1 [(sphere.binding.location) = BINDING_LOCATION_QUERY];
+  int64 u = 2 [(sphere.binding.location) = BINDING_LOCATION_URI];
+  string h = 3 [(sphere.binding.location) = BINDING_LOCATION_HEADER];
+  bytes f = 4 [(sphere.binding.location) = BINDING_LOCATION_FORM];
+}

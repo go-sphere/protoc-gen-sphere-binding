@@ -25,13 +25,18 @@ message OneofRequest {
     int64 by_id = 3;
   }
 
-  // Nested message inherits the enclosing message location (QUERY).
+  // Nested message: its own scalar fields inherit the enclosing message
+  // location (QUERY) when it is instantiated in a QUERY scope.
   message Filter {
     string status = 1;
     int64 limit = 2;
   }
 
-  Filter filter = 4;
+  // A message-typed field cannot be bound from a single query token, so it is
+  // pinned to JSON explicitly. Without this override it would inherit the
+  // message default (QUERY) and the plugin would reject it (message fields are
+  // not scalar-bindable to query/uri/header).
+  Filter filter = 4 [(sphere.binding.location) = BINDING_LOCATION_JSON];
 }
 
 message OneofResponse {

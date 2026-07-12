@@ -19,6 +19,18 @@ var noJsonBinding = map[binding.BindingLocation]string{
 	binding.BindingLocation_BINDING_LOCATION_HEADER: "header",
 }
 
+// scalarBindLocations are the binding locations whose value is decoded from a
+// single string token. A map, bytes or arbitrary message field has no scalar
+// text form, so tagging it for one of these locations produces a struct tag the
+// runtime binder cannot satisfy. FORM is intentionally excluded: form data can
+// legitimately carry files/bytes. Kept in sync with protoc-gen-sphere's
+// parser.checkScalarBindable.
+var scalarBindLocations = map[binding.BindingLocation]bool{
+	binding.BindingLocation_BINDING_LOCATION_QUERY:  true,
+	binding.BindingLocation_BINDING_LOCATION_URI:    true,
+	binding.BindingLocation_BINDING_LOCATION_HEADER: true,
+}
+
 type Config struct {
 	AutoRemoveJson bool
 	BindingAliases map[string][]string
@@ -204,6 +216,57 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 	return tags, nil
 }
 
+// isScalarBindable reports whether field can be bound from a single string token
+// (query/uri/header). Maps and bytes cannot; message fields are only allowed
+// when they are well-known scalar wrappers (Timestamp/Duration/wrapperspb.*Value).
+func isScalarBindable(field *protogen.Field) bool {
+	if field.Desc.IsMap() {
+		return false
+	}
+	switch field.Desc.Kind() {
+	case protoreflect.BytesKind:
+		return false
+	case protoreflect.MessageKind, protoreflect.GroupKind:
+		return isWellKnownScalarMessage(field)
+	default:
+		return true
+	}
+}
+
+// isWellKnownScalarMessage reports whether a message field is one of the
+// well-known types that carry a natural scalar representation and can therefore
+// be decoded from a single string token.
+func isWellKnownScalarMessage(field *protogen.Field) bool {
+	if field.Message == nil {
+		return false
+	}
+	switch field.Message.Desc.FullName() {
+	case "google.protobuf.Timestamp", "google.protobuf.Duration",
+		"google.protobuf.StringValue", "google.protobuf.BytesValue",
+		"google.protobuf.BoolValue",
+		"google.protobuf.DoubleValue", "google.protobuf.FloatValue",
+		"google.protobuf.Int32Value", "google.protobuf.UInt32Value",
+		"google.protobuf.Int64Value", "google.protobuf.UInt64Value":
+		return true
+	}
+	return false
+}
+
+// fieldKindDesc returns a human-readable description of a field's type for use
+// in error messages (e.g. "map", "bytes", "message").
+func fieldKindDesc(field *protogen.Field) string {
+	switch {
+	case field.Desc.IsMap():
+		return "map"
+	case field.Desc.Kind() == protoreflect.BytesKind:
+		return "bytes"
+	case field.Desc.Kind() == protoreflect.MessageKind || field.Desc.Kind() == protoreflect.GroupKind:
+		return "message"
+	default:
+		return field.Desc.Kind().String()
+	}
+}
+
 func extractField(field *protogen.Field, location binding.BindingLocation, autoTags []string, config *Config) (*structtag.Tags, error) {
 	location, autoTags = resolveLocationAndAutoTags(
 		field.Desc.Options(),
@@ -223,6 +286,13 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 
 	// Add sphere binding tags
 	if tag, ok := noJsonBinding[location]; ok {
+		if scalarBindLocations[location] && !isScalarBindable(field) {
+			return nil, fmt.Errorf("field `%s` of type `%s` cannot be bound to %q: only scalar types (and well-known scalar wrappers) are supported there",
+				field.Desc.FullName(),
+				fieldKindDesc(field),
+				tag,
+			)
+		}
 		if err := setTag(fieldTags, tag, fieldName); err != nil {
 			return nil, err
 		}

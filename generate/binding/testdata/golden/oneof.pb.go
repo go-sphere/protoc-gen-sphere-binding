@@ -36,8 +36,12 @@ type OneofRequest struct {
 	//
 	//	*OneofRequest_ByName
 	//	*OneofRequest_ById
-	Selector      isOneofRequest_Selector `protobuf_oneof:"selector"`
-	Filter        *OneofRequest_Filter    `protobuf:"bytes,4,opt,name=filter,proto3" json:"-" query:"filter"`
+	Selector isOneofRequest_Selector `protobuf_oneof:"selector"`
+	// A message-typed field cannot be bound from a single query token, so it is
+	// pinned to JSON explicitly. Without this override it would inherit the
+	// message default (QUERY) and the plugin would reject it (message fields are
+	// not scalar-bindable to query/uri/header).
+	Filter        *OneofRequest_Filter `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -171,7 +175,8 @@ func (x *OneofResponse) GetOk() string {
 	return ""
 }
 
-// Nested message inherits the enclosing message location (QUERY).
+// Nested message: its own scalar fields inherit the enclosing message
+// location (QUERY) when it is instantiated in a QUERY scope.
 type OneofRequest_Filter struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"-" query:"status"`
@@ -228,12 +233,12 @@ var File_oneof_proto protoreflect.FileDescriptor
 
 const file_oneof_proto_rawDesc = "" +
 	"\n" +
-	"\voneof.proto\x12\x11testdata.oneof.v1\x1a\x1csphere/binding/binding.proto\"\xf8\x01\n" +
+	"\voneof.proto\x12\x11testdata.oneof.v1\x1a\x1csphere/binding/binding.proto\"\x80\x02\n" +
 	"\fOneofRequest\x12\x14\n" +
 	"\x05outer\x18\x01 \x01(\tR\x05outer\x12\x19\n" +
 	"\aby_name\x18\x02 \x01(\tH\x00R\x06byName\x12\x15\n" +
-	"\x05by_id\x18\x03 \x01(\x03H\x00R\x04byId\x12>\n" +
-	"\x06filter\x18\x04 \x01(\v2&.testdata.oneof.v1.OneofRequest.FilterR\x06filter\x1a6\n" +
+	"\x05by_id\x18\x03 \x01(\x03H\x00R\x04byId\x12F\n" +
+	"\x06filter\x18\x04 \x01(\v2&.testdata.oneof.v1.OneofRequest.FilterB\x06\xc0\x9d\xa6\x89\x04\x03R\x06filter\x1a6\n" +
 	"\x06Filter\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x03R\x05limit:\x06\xa0\x9c\xa6\x89\x04\x01B \n" +
