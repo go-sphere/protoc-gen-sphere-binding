@@ -22,8 +22,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// OneofRequest exercises oneof level defaults plus nested messages, both of
-// which inherit the location/auto_tags from their enclosing scope.
+// OneofRequest exercises oneof-level defaults. Nested message types do not
+// inherit QUERY/URI/HEADER from the enclosing message.
 type OneofRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Outer string                 `protobuf:"bytes,1,opt,name=outer,proto3" json:"-" query:"outer"`
@@ -175,12 +175,11 @@ func (x *OneofResponse) GetOk() string {
 	return ""
 }
 
-// Nested message: its own scalar fields inherit the enclosing message
-// location (QUERY) when it is instantiated in a QUERY scope.
+// Nested type: scalars keep json tags (parent QUERY default is not inherited).
 type OneofRequest_Filter struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"-" query:"status"`
-	Limit         int64                  `protobuf:"varint,2,opt,name=limit,proto3" json:"-" query:"limit"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Limit         int64                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

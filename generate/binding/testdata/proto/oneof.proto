@@ -6,8 +6,8 @@ import "sphere/binding/binding.proto";
 
 option go_package = "github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/oneofv1;oneofv1";
 
-// OneofRequest exercises oneof level defaults plus nested messages, both of
-// which inherit the location/auto_tags from their enclosing scope.
+// OneofRequest exercises oneof-level defaults. Nested message types do not
+// inherit QUERY/URI/HEADER from the enclosing message.
 message OneofRequest {
   option (sphere.binding.default_location) = BINDING_LOCATION_QUERY;
 
@@ -25,8 +25,7 @@ message OneofRequest {
     int64 by_id = 3;
   }
 
-  // Nested message: its own scalar fields inherit the enclosing message
-  // location (QUERY) when it is instantiated in a QUERY scope.
+  // Nested type: scalars keep json tags (parent QUERY default is not inherited).
   message Filter {
     string status = 1;
     int64 limit = 2;

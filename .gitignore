@@ -143,3 +143,4 @@ fabric.properties
 # Only proto/, buf.*, and golden/ are tracked. CI runs `make test` to rebuild these.
 generate/binding/testdata/pb/
 generate/binding/testdata/gen/
+.tools/

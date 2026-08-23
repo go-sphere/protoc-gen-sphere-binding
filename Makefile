@@ -1,26 +1,25 @@
 MODULE := $(shell go list -m)
 
 TESTDATA := generate/binding/testdata
+TOOLS_BIN := $(CURDIR)/.tools
+# Pin the fixture generator to the same protobuf module version as go.mod / CI
+# (and the committed golden headers). A newer protoc-gen-go on PATH would only
+# change the version comment, but that still fails byte-for-byte golden tests.
+PROTOC_GEN_GO_VERSION := $(shell go list -m -f '{{.Version}}' google.golang.org/protobuf)
 
-# Compile the test fixtures into committed artifacts. Only this target needs buf
-# and protoc-gen-go; `go test` runs against the committed pb/ and gen/ files.
-#
-# Two outputs are produced per fixture:
-#   pb/<name>.pb     - FileDescriptorSet (bundles deps + source info) that the
-#                      plugin reads to extract binding options.
-#   gen/<name>.pb.go - raw protoc-gen-go output, the *input* the plugin rewrites.
-# The retagged result is the golden file under golden/, refreshed separately by
-# the update-golden target.
+# pb/ and gen/ are gitignored and rebuilt here. buf generate must use the pinned
+# protoc-gen-go, not whatever happens to be first on PATH.
 .PHONY: testdata
 testdata:
-	@mkdir -p $(TESTDATA)/pb
+	@mkdir -p $(TESTDATA)/pb $(TOOLS_BIN)
+	GOBIN=$(TOOLS_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
 	@for p in $(TESTDATA)/proto/*.proto; do \
 		name=$$(basename $$p .proto); \
 		echo "building $$p -> $(TESTDATA)/pb/$$name.pb"; \
 		buf build $(TESTDATA) --path $$p --as-file-descriptor-set \
 			-o $(TESTDATA)/pb/$$name.pb || exit 1; \
 	done
-	buf generate $(TESTDATA) --template $(TESTDATA)/buf.gen.yaml -o $(TESTDATA)
+	PATH="$(TOOLS_BIN):$$PATH" buf generate $(TESTDATA) --template $(TESTDATA)/buf.gen.yaml -o $(TESTDATA)
 
 .PHONY: update-golden
 # Scoped to the binding package: it is the only one that defines -update-golden,

@@ -165,8 +165,11 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 
 	messageTags := make(map[string]*structtag.Tags)
 
-	// process fields
+	// process fields (skip real oneof members; they are tagged on wrappers below)
 	for _, field := range message.Fields {
+		if field.Oneof != nil && !field.Oneof.Desc.IsSynthetic() {
+			continue
+		}
 		fieldTags, err := extractField(field, location, autoTags, config)
 		if err != nil {
 			return nil, err
@@ -176,8 +179,12 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 		}
 	}
 
-	// process one_of
+	// process one_of (skip proto3 optional synthetic oneofs; those fields
+	// were already tagged in the parent loop above)
 	for _, oneOf := range message.Oneofs {
+		if oneOf.Desc.IsSynthetic() {
+			continue
+		}
 		oneOfLocation, oneOfAutoTags := resolveLocationAndAutoTags(
 			oneOf.Desc.Options(),
 			binding.E_DefaultOneofLocation,
@@ -203,9 +210,14 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 		}
 	}
 
-	// process nested messages
+	// Nested type definitions do not inherit QUERY/URI/HEADER from the
+	// enclosing message: a JSON body field of a nested type would otherwise
+	// get json:"-" plus query tags. Map entries are skipped entirely.
 	for _, nested := range message.Messages {
-		extraTags, err := extractMessage(nested, location, autoTags, config)
+		if nested.Desc.IsMapEntry() {
+			continue
+		}
+		extraTags, err := extractMessage(nested, binding.BindingLocation_BINDING_LOCATION_UNSPECIFIED, nil, config)
 		if err != nil {
 			return nil, err
 		}

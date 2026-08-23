@@ -2,10 +2,12 @@ package binding
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/fatih/structtag"
 	"github.com/go-sphere/binding/sphere/binding"
+	"github.com/go-sphere/protoc-gen-sphere-binding/generate/internal/testutil"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -195,6 +197,44 @@ func TestExtractFile_NoOptions(t *testing.T) {
 	}
 	if len(tags) != 0 {
 		t.Fatalf("expected no struct tags, got %v", tags)
+	}
+}
+
+func TestExtractFile_NestedDoesNotInheritParentQuery(t *testing.T) {
+	set := testutil.LoadDescriptorSet(t, "testdata/pb/oneof.pb")
+	plugin := testutil.MustCreatePlugin(t, set, "oneof.proto")
+	file := testutil.FileToGenerate(t, plugin)
+
+	tags, err := extractFile(file, DefaultConfig())
+	if err != nil {
+		t.Fatalf("extractFile: %v", err)
+	}
+
+	parent := tags["OneofRequest"]
+	if parent == nil {
+		t.Fatal("expected tags for OneofRequest")
+	}
+	outer := parent["Outer"]
+	if outer == nil || !strings.Contains(outer.String(), `query:"outer"`) {
+		t.Fatalf("parent Outer should keep QUERY tags, got %v", outer)
+	}
+
+	if filterMsg, ok := tags["OneofRequest_Filter"]; ok {
+		for field, fieldTags := range filterMsg {
+			got := fieldTags.String()
+			if strings.Contains(got, "query:") || strings.Contains(got, `json:"-"`) {
+				t.Errorf("nested Filter.%s inherited parent QUERY tags: %s", field, got)
+			}
+		}
+	}
+
+	byName := tags["OneofRequest_ByName"]
+	if byName == nil {
+		t.Fatal("expected tags for OneofRequest_ByName wrapper")
+	}
+	wrapper := byName["ByName"]
+	if wrapper == nil || !strings.Contains(wrapper.String(), `uri:"by_name"`) {
+		t.Fatalf("oneof wrapper ByName should be tagged on OneofRequest_ByName, got %v", wrapper)
 	}
 }
 
