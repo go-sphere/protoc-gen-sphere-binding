@@ -1,18 +1,38 @@
-MODULE := $(shell go list -m)
+GO ?= go
+GOLANGCI_LINT ?= golangci-lint
+NILAWAY ?= nilaway
+
+DIRECT_DEPS_TEMPLATE := {{if and (not .Main) (not .Indirect) (not .Replace)}}{{.Path}}{{end}}
+
+.DEFAULT_GOAL := check
 
 TESTDATA := generate/binding/testdata
+
+.PHONY: deps-update tidy fmt
+
+deps-update:
+	@deps="$$(GOWORK=off $(GO) list -m -f '$(DIRECT_DEPS_TEMPLATE)' all)"; \
+	if [ -n "$$deps" ]; then GOWORK=off $(GO) get -u $$deps; fi
+	GOWORK=off $(GO) mod tidy
+
+tidy:
+	GOWORK=off $(GO) mod tidy
+
+fmt:
+	$(GO) fmt ./...
+	$(GOLANGCI_LINT) fmt --no-config --enable gofmt --enable goimports
 TOOLS_BIN := $(CURDIR)/.tools
 # Pin the fixture generator to the same protobuf module version as go.mod / CI
 # (and the committed golden headers). A newer protoc-gen-go on PATH would only
 # change the version comment, but that still fails byte-for-byte golden tests.
-PROTOC_GEN_GO_VERSION := $(shell go list -m -f '{{.Version}}' google.golang.org/protobuf)
+PROTOC_GEN_GO_VERSION := $(shell $(GO) list -m -f '{{.Version}}' google.golang.org/protobuf)
 
 # pb/ and gen/ are gitignored and rebuilt here. buf generate must use the pinned
 # protoc-gen-go, not whatever happens to be first on PATH.
 .PHONY: testdata
 testdata:
 	@mkdir -p $(TESTDATA)/pb $(TOOLS_BIN)
-	GOBIN=$(TOOLS_BIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+	GOBIN=$(TOOLS_BIN) $(GO) install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
 	@for p in $(TESTDATA)/proto/*.proto; do \
 		name=$$(basename $$p .proto); \
 		echo "building $$p -> $(TESTDATA)/pb/$$name.pb"; \
@@ -25,24 +45,23 @@ testdata:
 # Scoped to the binding package: it is the only one that defines -update-golden,
 # so passing the flag to ./generate/... would fail the testutil test binary.
 update-golden: testdata
-	go test ./generate/binding/ -run TestGolden -update-golden
+	$(GO) test ./generate/binding/ -run TestGolden -update-golden
 
 .PHONY: test
 test: testdata
-	go test ./...
+	$(GO) test ./...
 
-.PHONY: lint
+.PHONY: lint check install
 lint:
-	go fix ./...
-	go fmt ./...
-	go vet ./...
-	go get ./...
-	go test ./...
-	go mod tidy
-	golangci-lint fmt --no-config --enable gofmt,goimports
-	golangci-lint run --no-config --fix
-	nilaway -include-pkgs="$(MODULE)" ./...
+	$(GOLANGCI_LINT) fmt --no-config --enable gofmt --enable goimports --diff
+	$(GO) vet ./...
+	$(GOLANGCI_LINT) run --no-config
+	$(NILAWAY) -include-pkgs="$$($(GO) list -m)" ./...
 
-.PHONY: install
+check:
+	GOWORK=off $(GO) mod tidy -diff
+	$(MAKE) lint
+	$(MAKE) test
+
 install:
-	go install .
+	$(GO) install .
