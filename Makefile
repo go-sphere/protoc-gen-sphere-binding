@@ -47,7 +47,10 @@ testdata:
 update-golden: testdata
 	$(GO) test ./generate/binding/ -run TestGolden -update-golden
 
-.PHONY: test
+.PHONY: build test
+build:
+	$(GO) build ./...
+
 test: testdata
 	$(GO) test ./...
 

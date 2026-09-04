@@ -1,28 +1,30 @@
-name: Verify
+name: Test
 
 permissions:
   contents: read
 
 on:
   push:
-    branches: ["master"]
+    branches: [master]
   pull_request:
-    branches: ["master"]
+    branches: [master]
 
 jobs:
-  verify:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-          cache: true
+          cache-dependency-path: "**/go.sum"
       - name: Install fixture tools
         run: |
           go install github.com/bufbuild/buf/cmd/buf@v1.72.0
           go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
-      - name: Test generated fixtures and golden output
+      - name: Build
+        run: make build
+      - name: Test
         run: make test
-      - name: Verify committed fixtures
+      - name: Verify generated files
         run: git diff --exit-code
