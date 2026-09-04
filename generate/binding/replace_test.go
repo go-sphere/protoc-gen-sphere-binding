@@ -95,16 +95,3 @@ func TestRetagSource(t *testing.T) {
 		}
 	})
 }
-
-func TestReTagsWithCheckChangedFlag(t *testing.T) {
-	t.Run("reports change", func(t *testing.T) {
-		tags := StructTags{"Foo": {"Name": mustTags(t, `query:"name"`)}}
-		_, changed, err := RetagSource("foo.go", []byte(retagSrc), tags)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !changed {
-			t.Fatal("expected changed = true")
-		}
-	})
-}

@@ -1,7 +1,6 @@
 package binding
 
 import (
-	"strings"
 	"testing"
 
 	spherebinding "github.com/go-sphere/binding/sphere/binding"
@@ -27,11 +26,20 @@ func TestBindingLocationKindValidation(t *testing.T) {
 
 	bad := []struct {
 		message string
-		want    string // substring the error should mention
+		wantErr string
 	}{
-		{"BadQueryMessage", "query"},
-		{"BadUriMap", "uri"},
-		{"BadHeaderBytes", "header"},
+		{
+			"BadQueryMessage",
+			"field `testdata.invalidbinding.v1.BadQueryMessage.inner` of type `message` cannot be bound to \"query\": only scalar types (and well-known scalar wrappers) are supported there",
+		},
+		{
+			"BadUriMap",
+			"field `testdata.invalidbinding.v1.BadUriMap.m` of type `map` cannot be bound to \"uri\": only scalar types (and well-known scalar wrappers) are supported there",
+		},
+		{
+			"BadHeaderBytes",
+			"field `testdata.invalidbinding.v1.BadHeaderBytes.data` of type `bytes` cannot be bound to \"header\": only scalar types (and well-known scalar wrappers) are supported there",
+		},
 	}
 	for _, tt := range bad {
 		t.Run(tt.message, func(t *testing.T) {
@@ -43,8 +51,8 @@ func TestBindingLocationKindValidation(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected error for %s, got nil", tt.message)
 			}
-			if !strings.Contains(err.Error(), tt.want) {
-				t.Errorf("error should mention %q: %v", tt.want, err)
+			if got := err.Error(); got != tt.wantErr {
+				t.Errorf("error = %q, want %q", got, tt.wantErr)
 			}
 		})
 	}

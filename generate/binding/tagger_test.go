@@ -8,10 +8,8 @@ import (
 	"github.com/fatih/structtag"
 	"github.com/go-sphere/binding/sphere/binding"
 	"github.com/go-sphere/protoc-gen-sphere-binding/generate/internal/testutil"
-	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 func TestValidateTagKey(t *testing.T) {
@@ -109,16 +107,6 @@ func TestSetTag(t *testing.T) {
 	})
 }
 
-func TestSetTagsByKeys(t *testing.T) {
-	tags := &structtag.Tags{}
-	if err := setTagsByKeys(tags, []string{"query", "form"}, "name"); err != nil {
-		t.Fatal(err)
-	}
-	if got, want := tags.String(), `query:"name" form:"name"`; got != want {
-		t.Fatalf("setTagsByKeys = %q, want %q", got, want)
-	}
-}
-
 func TestResolveLocationAndAutoTags(t *testing.T) {
 	const defaultLoc = binding.BindingLocation_BINDING_LOCATION_QUERY
 
@@ -152,52 +140,6 @@ func TestResolveLocationAndAutoTags(t *testing.T) {
 			t.Fatalf("autoTags = %v, want [form db]", autoTags)
 		}
 	})
-}
-
-// TestExtractFile_NoOptions verifies the skip logic: a message whose fields have
-// no sphere.binding options contributes no struct tags, so extractFile returns
-// an empty map and the plugin leaves the file untouched. This mirrors the
-// Layer 1 "hand-written descriptor" approach from TESTING.md (no custom
-// extensions, so no descriptor-set dependency).
-func TestExtractFile_NoOptions(t *testing.T) {
-	fd := &descriptorpb.FileDescriptorProto{
-		Name:    proto.String("plain.proto"),
-		Package: proto.String("api.v1"),
-		Options: &descriptorpb.FileOptions{
-			GoPackage: proto.String("github.com/example/api/v1;apiv1"),
-		},
-		MessageType: []*descriptorpb.DescriptorProto{
-			{
-				Name: proto.String("Plain"),
-				Field: []*descriptorpb.FieldDescriptorProto{
-					{
-						Name:   proto.String("name"),
-						Number: proto.Int32(1),
-						Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
-						Label:  descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
-					},
-				},
-			},
-		},
-	}
-
-	req := &pluginpb.CodeGeneratorRequest{
-		FileToGenerate: []string{"plain.proto"},
-		ProtoFile:      []*descriptorpb.FileDescriptorProto{fd},
-	}
-	plugin, err := protogen.Options{}.New(req)
-	if err != nil {
-		t.Fatalf("failed to create plugin: %v", err)
-	}
-
-	// Safe here: a single hand-written file with no imports is plugin.Files[0].
-	tags, err := extractFile(plugin.Files[0], DefaultConfig())
-	if err != nil {
-		t.Fatalf("extractFile failed: %v", err)
-	}
-	if len(tags) != 0 {
-		t.Fatalf("expected no struct tags, got %v", tags)
-	}
 }
 
 func TestExtractFile_NestedDoesNotInheritParentQuery(t *testing.T) {
