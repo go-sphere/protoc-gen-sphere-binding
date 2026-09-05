@@ -45,7 +45,7 @@ func goldenCases() []goldenCase {
 			goldenFile: "testdata/golden/basic_aliases.pb.go",
 			config: func() *Config {
 				return &Config{
-					AutoRemoveJson: false,
+					AutoRemoveJSON: false,
 					BindingAliases: map[string][]string{
 						"query": {"form"},
 						"uri":   {"path"},

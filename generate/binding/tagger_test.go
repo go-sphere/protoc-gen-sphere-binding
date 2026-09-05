@@ -182,10 +182,27 @@ func TestExtractFile_NestedDoesNotInheritParentQuery(t *testing.T) {
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
-	if !cfg.AutoRemoveJson {
-		t.Error("DefaultConfig().AutoRemoveJson = false, want true")
+	if !cfg.AutoRemoveJSON {
+		t.Error("DefaultConfig().AutoRemoveJSON = false, want true")
 	}
 	if cfg.BindingAliases == nil {
 		t.Error("DefaultConfig().BindingAliases = nil, want non-nil")
+	}
+}
+
+func TestConfigValidate(t *testing.T) {
+	if err := DefaultConfig().Validate(); err != nil {
+		t.Fatalf("DefaultConfig().Validate() error = %v", err)
+	}
+	if err := (*Config)(nil).Validate(); err == nil {
+		t.Fatal("nil Config.Validate() error = nil")
+	}
+	for _, cfg := range []*Config{
+		{BindingAliases: map[string][]string{"bad key": {"form"}}},
+		{BindingAliases: map[string][]string{"query": {"bad alias"}}},
+	} {
+		if err := cfg.Validate(); err == nil {
+			t.Fatalf("Validate(%v) error = nil", cfg.BindingAliases)
+		}
 	}
 }

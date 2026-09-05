@@ -38,8 +38,8 @@ func LoadDescriptorSet(t *testing.T, path string) *descriptorpb.FileDescriptorSe
 // must include every dependency; fileToGenerate is the proto path (relative to
 // the buf module root) that should be generated.
 //
-// CompilerVersion is pinned so any version-dependent output stays deterministic
-// and does not depend on the host toolchain version.
+// CompilerVersion is pinned so generated headers stay deterministic and do not
+// depend on the host toolchain version (an unset version renders as "(unknown)").
 func MustCreatePlugin(t *testing.T, set *descriptorpb.FileDescriptorSet, fileToGenerate string) *protogen.Plugin {
 	t.Helper()
 

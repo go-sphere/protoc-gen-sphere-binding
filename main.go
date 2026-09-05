@@ -9,41 +9,60 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
+const (
+	version          = "0.0.1"
+	defaultOutputDir = "api"
+)
+
 var (
 	showVersion    = flag.Bool("version", false, "print the version and exit")
-	autoRemoveJson = flag.Bool("auto_remove_json", true, "automatically remove json tag if sphere binding location set")
+	autoRemoveJSON = flag.Bool("auto_remove_json", binding.DefaultAutoRemoveJSON, "automatically remove json tag if sphere binding location set")
 	bindingAliases = flag.String("binding_aliases", "", "example: query=form,uri=path,db=database. add additional tag aliases for any binding tag")
-	out            = flag.String("out", "api", "output directory for generated files")
+	out            = flag.String("out", defaultOutputDir, "output directory for generated files")
 )
 
 func main() {
 	flag.Parse()
 	if *showVersion {
-		fmt.Printf("protoc-gen-sphere-binding %v\n", "0.0.1")
+		fmt.Printf("protoc-gen-sphere-binding %s\n", version)
 		return
 	}
 	protogen.Options{
 		ParamFunc: flag.CommandLine.Set,
-	}.Run(func(gen *protogen.Plugin) error {
-		gen.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
+	}.Run(run)
+}
 
-		aliases, err := binding.ParseBindingAliases(*bindingAliases)
-		if err != nil {
+func run(plugin *protogen.Plugin) error {
+	plugin.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
+	cfg, err := extractConfig()
+	if err != nil {
+		return err
+	}
+	generator, err := binding.NewGenerator(*out, cfg)
+	if err != nil {
+		return err
+	}
+	for _, file := range plugin.Files {
+		if !file.Generate {
+			continue
+		}
+		if err := generator.GenerateFile(file); err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
-		for _, f := range gen.Files {
-			if !f.Generate {
-				continue
-			}
-			bErr := binding.GenerateFile(f, *out, &binding.Config{
-				AutoRemoveJson: *autoRemoveJson,
-				BindingAliases: aliases,
-			})
-			if bErr != nil {
-				return bErr
-			}
-		}
-		return nil
-	})
+func extractConfig() (*binding.Config, error) {
+	aliases, err := binding.ParseBindingAliases(*bindingAliases)
+	if err != nil {
+		return nil, err
+	}
+	cfg := binding.DefaultConfig()
+	cfg.AutoRemoveJSON = *autoRemoveJSON
+	cfg.BindingAliases = aliases
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }

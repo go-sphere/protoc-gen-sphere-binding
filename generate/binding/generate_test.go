@@ -100,3 +100,26 @@ func TestGenerateFile_NoOptions(t *testing.T) {
 		t.Error("expected the file to be left untouched when there are no binding options")
 	}
 }
+
+func TestNewGeneratorSnapshotsConfig(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.BindingAliases["query"] = []string{"form"}
+	generator, err := NewGenerator("api", cfg)
+	if err != nil {
+		t.Fatalf("NewGenerator() error = %v", err)
+	}
+	cfg.BindingAliases["query"][0] = "changed"
+	if generator.cfg == nil {
+		t.Fatal("Generator configuration is nil")
+	}
+	aliases := generator.cfg.BindingAliases["query"]
+	if len(aliases) != 1 {
+		t.Fatalf("Generator aliases = %v, want one alias", aliases)
+	}
+	if got := aliases[0]; got != "form" {
+		t.Fatalf("Generator alias = %q after caller mutation, want form", got)
+	}
+	if _, err := NewGenerator("api", nil); err == nil {
+		t.Fatal("NewGenerator(nil) error = nil")
+	}
+}

@@ -13,6 +13,7 @@ import (
 	"github.com/fatih/structtag"
 )
 
+// StructTags maps generated message and field names to replacement struct tags.
 type StructTags map[string]map[string]*structtag.Tags
 
 // RetagSource parses the Go source in src, applies tags to the matching struct
@@ -30,7 +31,7 @@ func RetagSource(filename string, src []byte, tags StructTags) ([]byte, bool, er
 	}
 
 	changed := false
-	if err := ReTagsWithCheck(fn, tags, &changed); err != nil {
+	if err := RetagASTWithCheck(fn, tags, &changed); err != nil {
 		return nil, false, err
 	}
 	if !changed {
@@ -49,19 +50,32 @@ func RetagSource(filename string, src []byte, tags StructTags) ([]byte, bool, er
 	return source, true, nil
 }
 
-// ReTagsWithCheck modifies tags and detects actual changes
-func ReTagsWithCheck(file *ast.File, tags StructTags, changed *bool) error {
+// RetagASTWithCheck modifies tags and reports whether the AST changed.
+func RetagASTWithCheck(file *ast.File, tags StructTags, changed *bool) error {
 	if changed != nil {
 		*changed = false
 	}
-	return reTagsInternal(file, tags, changed)
+	return retagAST(file, tags, changed)
 }
 
+// RetagAST applies tags to a parsed Go file.
+func RetagAST(file *ast.File, tags StructTags) error {
+	return retagAST(file, tags, nil)
+}
+
+// ReTagsWithCheck is retained for compatibility.
+// Deprecated: use RetagASTWithCheck.
+func ReTagsWithCheck(file *ast.File, tags StructTags, changed *bool) error {
+	return RetagASTWithCheck(file, tags, changed)
+}
+
+// ReTags is retained for compatibility.
+// Deprecated: use RetagAST.
 func ReTags(file *ast.File, tags StructTags) error {
-	return reTagsInternal(file, tags, nil)
+	return RetagAST(file, tags)
 }
 
-func reTagsInternal(file *ast.File, tags StructTags, changed *bool) error {
+func retagAST(file *ast.File, tags StructTags, changed *bool) error {
 	for _, decl := range file.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok {
@@ -97,17 +111,17 @@ func reTagsInternal(file *ast.File, tags StructTags, changed *bool) error {
 					}
 
 					currentTagValue := strings.Trim(field.Tag.Value, "`")
-					oldTags, parseErr := structtag.Parse(currentTagValue)
-					if parseErr != nil {
-						return parseErr
+					oldTags, err := structtag.Parse(currentTagValue)
+					if err != nil {
+						return err
 					}
 
 					originalTagValue := oldTags.String()
 
 					sort.Stable(newTags)
 					for _, t := range newTags.Tags() {
-						if setErr := oldTags.Set(t); setErr != nil {
-							return setErr
+						if err := oldTags.Set(t); err != nil {
+							return err
 						}
 					}
 					newTagValue := oldTags.String()

@@ -7,6 +7,12 @@ DIRECT_DEPS_TEMPLATE := {{if and (not .Main) (not .Indirect) (not .Replace)}}{{.
 .DEFAULT_GOAL := check
 
 TESTDATA := generate/binding/testdata
+TOOLS_BIN := $(CURDIR)/.tools
+
+# Pin the fixture generator to the same protobuf module version as go.mod / CI
+# (and the committed golden headers). A newer protoc-gen-go on PATH would only
+# change the version comment, but that still fails byte-for-byte golden tests.
+PROTOC_GEN_GO_VERSION := $(shell $(GO) list -m -f '{{.Version}}' google.golang.org/protobuf)
 
 .PHONY: deps-update tidy fmt
 
@@ -21,11 +27,6 @@ tidy:
 fmt:
 	$(GO) fmt ./...
 	$(GOLANGCI_LINT) fmt --no-config --enable gofmt --enable goimports
-TOOLS_BIN := $(CURDIR)/.tools
-# Pin the fixture generator to the same protobuf module version as go.mod / CI
-# (and the committed golden headers). A newer protoc-gen-go on PATH would only
-# change the version comment, but that still fails byte-for-byte golden tests.
-PROTOC_GEN_GO_VERSION := $(shell $(GO) list -m -f '{{.Version}}' google.golang.org/protobuf)
 
 # pb/ and gen/ are gitignored and rebuilt here. buf generate must use the pinned
 # protoc-gen-go, not whatever happens to be first on PATH.

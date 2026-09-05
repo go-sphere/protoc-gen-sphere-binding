@@ -1,9 +1,11 @@
+// Package binding implements protoc-gen-sphere-binding. It derives Sphere
+// binding metadata from protobuf descriptors and applies the resulting struct
+// tags to protoc-gen-go output.
 package binding
 
 import (
 	"fmt"
 	"maps"
-	"strings"
 
 	"github.com/fatih/structtag"
 	"github.com/go-sphere/binding/sphere/binding"
@@ -12,7 +14,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var noJsonBinding = map[binding.BindingLocation]string{
+var noJSONBinding = map[binding.BindingLocation]string{
 	binding.BindingLocation_BINDING_LOCATION_QUERY:  "query",
 	binding.BindingLocation_BINDING_LOCATION_URI:    "uri",
 	binding.BindingLocation_BINDING_LOCATION_FORM:   "form",
@@ -29,68 +31,6 @@ var scalarBindLocations = map[binding.BindingLocation]bool{
 	binding.BindingLocation_BINDING_LOCATION_QUERY:  true,
 	binding.BindingLocation_BINDING_LOCATION_URI:    true,
 	binding.BindingLocation_BINDING_LOCATION_HEADER: true,
-}
-
-type Config struct {
-	AutoRemoveJson bool
-	BindingAliases map[string][]string
-}
-
-// DefaultConfig returns the configuration the plugin uses out of the box, i.e.
-// the same defaults main.go wires from its flags: json tags are removed for
-// non-JSON binding locations and no extra tag aliases are registered. Tests use
-// it so golden files stay representative of real output.
-func DefaultConfig() *Config {
-	return &Config{
-		AutoRemoveJson: true,
-		BindingAliases: map[string][]string{},
-	}
-}
-
-// ValidateTagKey validates if a tag key is valid for Go struct tags
-func ValidateTagKey(key string) error {
-	if len(key) == 0 {
-		return fmt.Errorf("tag key cannot be empty")
-	}
-	if strings.ContainsAny(key, " \t\n\r`:\"") {
-		return fmt.Errorf("tag key '%s' contains illegal characters", key)
-	}
-	return nil
-}
-
-// ParseBindingAliases parses and validates binding aliases from a comma-separated string
-func ParseBindingAliases(aliasStr string) (map[string][]string, error) {
-	aliases := make(map[string][]string)
-	if aliasStr == "" {
-		return aliases, nil
-	}
-
-	for _, alias := range strings.Split(aliasStr, ",") {
-		alias = strings.TrimSpace(alias)
-		if len(alias) == 0 {
-			continue
-		}
-
-		kv := strings.Split(alias, "=")
-		if len(kv) != 2 {
-			return nil, fmt.Errorf("invalid binding alias format '%s': expected 'key=value'", alias)
-		}
-
-		key := strings.TrimSpace(kv[0])
-		value := strings.TrimSpace(kv[1])
-
-		if err := ValidateTagKey(key); err != nil {
-			return nil, fmt.Errorf("invalid binding alias '%s': %w", alias, err)
-		}
-
-		if err := ValidateTagKey(value); err != nil {
-			return nil, fmt.Errorf("invalid binding alias '%s': %w", alias, err)
-		}
-
-		aliases[key] = append(aliases[key], value)
-	}
-
-	return aliases, nil
 }
 
 // extractFile walks every top-level message in file and collects the struct
@@ -297,7 +237,7 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 	}
 
 	// Add sphere binding tags
-	if tag, ok := noJsonBinding[location]; ok {
+	if tag, ok := noJSONBinding[location]; ok {
 		if scalarBindLocations[location] && !isScalarBindable(field) {
 			return nil, fmt.Errorf("field `%s` of type `%s` cannot be bound to %q: only scalar types (and well-known scalar wrappers) are supported there",
 				field.Desc.FullName(),
@@ -313,7 +253,7 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 				return nil, err
 			}
 		}
-		if config.AutoRemoveJson {
+		if config.AutoRemoveJSON {
 			if err := setTag(fieldTags, "json", "-"); err != nil {
 				return nil, err
 			}
