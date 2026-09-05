@@ -1,6 +1,6 @@
 module github.com/go-sphere/protoc-gen-sphere-binding
 
-go 1.23.0
+go 1.26.8
 
 require (
 	github.com/fatih/structtag v1.2.0
