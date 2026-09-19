@@ -1,4 +1,4 @@
-name: Test
+name: CI
 
 permissions:
   contents: read
@@ -18,15 +18,21 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: "**/go.sum"
-      - name: Install fixture tools
+      # Only buf is needed here: make testdata installs the protoc-gen-go it
+      # pins from go.mod into .tools itself, so PATH cannot leak a different
+      # version into the golden files.
+      - name: Install Buf
         env:
           GOTOOLCHAIN: auto
-        run: |
-          go install github.com/bufbuild/buf/cmd/buf@v1.72.0
-          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
+        run: go install github.com/bufbuild/buf/cmd/buf@v1.73.0
+      - name: Check dependencies
+        run: make tidy-check
+      # The plugin binary is the deliverable: compile it before testing.
       - name: Build
         run: make build
       - name: Test
         run: make test
+      # Rebuilding the fixtures must not change anything that is committed
+      # (descriptor sets and golden files).
       - name: Verify generated files
         run: git diff --exit-code
