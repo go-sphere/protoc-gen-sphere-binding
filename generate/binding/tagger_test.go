@@ -52,8 +52,8 @@ func TestParseBindingAliases(t *testing.T) {
 		},
 		{
 			name:  "multiple",
-			input: "query=form,uri=path,db=database",
-			want:  map[string][]string{"query": {"form"}, "uri": {"path"}, "db": {"database"}},
+			input: "query=form,uri=path,header=h",
+			want:  map[string][]string{"query": {"form"}, "uri": {"path"}, "header": {"h"}},
 		},
 		{
 			name:  "repeated_key_accumulates",

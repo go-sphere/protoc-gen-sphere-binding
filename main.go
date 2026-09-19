@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	version          = "0.0.1"
+	version          = "0.0.5"
 	defaultOutputDir = "api"
 )
 
 var (
 	showVersion    = flag.Bool("version", false, "print the version and exit")
 	autoRemoveJSON = flag.Bool("auto_remove_json", binding.DefaultAutoRemoveJSON, "automatically remove json tag if sphere binding location set")
-	bindingAliases = flag.String("binding_aliases", "", "example: query=form,uri=path,db=database. add additional tag aliases for any binding tag")
+	bindingAliases = flag.String("binding_aliases", "", "example: query=form,uri=path. add additional tag aliases for a binding tag (query, uri, form, header)")
 	out            = flag.String("out", defaultOutputDir, "output directory for generated files")
 )
 
