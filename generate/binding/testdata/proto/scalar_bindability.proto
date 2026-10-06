@@ -1,0 +1,297 @@
+// Shared scalar-bindability fixture for protoc-gen-sphere and
+// protoc-gen-sphere-binding.
+//
+// KEEP BYTE-IDENTICAL in both repositories and update both together, along
+// with testdata/golden/scalar_bindability.golden (the expected decision for
+// every field below in every location):
+//
+//   protoc-gen-sphere:         generate/http/testdata/
+//   protoc-gen-sphere-binding: generate/binding/testdata/
+//
+// Each *Fields message carries the same field list under a different
+// default_location, so the table pins one decision per (location, field). The
+// list covers every scalar kind, enums, bytes, an arbitrary message, the 11
+// well-known scalar wrappers, other well-known messages that are NOT scalar,
+// repeated, map, proto3 optional and real oneof members. proto2 groups are not
+// expressible in proto3 and are left out.
+syntax = "proto3";
+
+package testdata.scalar_bindability.v1;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "sphere/binding/binding.proto";
+
+option go_package = "example.com/testdata/scalarbindabilityv1;scalarbindabilityv1";
+
+// The service only gives each *Fields message a method, so protoc-gen-sphere
+// can run its real per-location collectors over it.
+service ScalarBindabilityService {
+  rpc Query(QueryFields) returns (google.protobuf.Empty);
+  rpc Uri(UriFields) returns (google.protobuf.Empty);
+  rpc Header(HeaderFields) returns (google.protobuf.Empty);
+  rpc Form(FormFields) returns (google.protobuf.Empty);
+}
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1;
+}
+
+// Plain is an arbitrary (non well-known) message.
+message Plain {
+  string value = 1;
+}
+
+message QueryFields {
+  option (sphere.binding.default_location) = BINDING_LOCATION_QUERY;
+
+  double f_double = 1;
+  float f_float = 2;
+  int32 f_int32 = 3;
+  int64 f_int64 = 4;
+  uint32 f_uint32 = 5;
+  uint64 f_uint64 = 6;
+  sint32 f_sint32 = 7;
+  sint64 f_sint64 = 8;
+  fixed32 f_fixed32 = 9;
+  fixed64 f_fixed64 = 10;
+  sfixed32 f_sfixed32 = 11;
+  sfixed64 f_sfixed64 = 12;
+  bool f_bool = 13;
+  string f_string = 14;
+  bytes f_bytes = 15;
+  Color f_enum = 16;
+  Plain f_message = 17;
+  google.protobuf.Timestamp wkt_timestamp = 18;
+  google.protobuf.Duration wkt_duration = 19;
+  google.protobuf.StringValue wkt_string_value = 20;
+  google.protobuf.BytesValue wkt_bytes_value = 21;
+  google.protobuf.BoolValue wkt_bool_value = 22;
+  google.protobuf.DoubleValue wkt_double_value = 23;
+  google.protobuf.FloatValue wkt_float_value = 24;
+  google.protobuf.Int32Value wkt_int32_value = 25;
+  google.protobuf.UInt32Value wkt_uint32_value = 26;
+  google.protobuf.Int64Value wkt_int64_value = 27;
+  google.protobuf.UInt64Value wkt_uint64_value = 28;
+  google.protobuf.Struct wkt_struct = 29;
+  google.protobuf.Value wkt_value = 30;
+  google.protobuf.ListValue wkt_list_value = 31;
+  google.protobuf.Any wkt_any = 32;
+  google.protobuf.FieldMask wkt_field_mask = 33;
+  google.protobuf.Empty wkt_empty = 34;
+  repeated int32 rep_int32 = 35;
+  repeated string rep_string = 36;
+  repeated bytes rep_bytes = 37;
+  repeated Color rep_enum = 38;
+  repeated Plain rep_message = 39;
+  repeated google.protobuf.Timestamp rep_timestamp = 40;
+  repeated google.protobuf.Struct rep_struct = 41;
+  map<string, string> map_string_string = 42;
+  map<int64, bytes> map_int64_bytes = 43;
+  map<string, Plain> map_string_message = 44;
+  optional int32 opt_int32 = 45;
+  optional string opt_string = 46;
+  optional bytes opt_bytes = 47;
+  optional Color opt_enum = 48;
+  optional Plain opt_message = 49;
+  optional google.protobuf.Timestamp opt_timestamp = 50;
+  oneof choice {
+    string one_string = 51;
+    bytes one_bytes = 52;
+    Color one_enum = 53;
+    Plain one_message = 54;
+    google.protobuf.Int64Value one_int64_value = 55;
+  }
+}
+
+message UriFields {
+  option (sphere.binding.default_location) = BINDING_LOCATION_URI;
+
+  double f_double = 1;
+  float f_float = 2;
+  int32 f_int32 = 3;
+  int64 f_int64 = 4;
+  uint32 f_uint32 = 5;
+  uint64 f_uint64 = 6;
+  sint32 f_sint32 = 7;
+  sint64 f_sint64 = 8;
+  fixed32 f_fixed32 = 9;
+  fixed64 f_fixed64 = 10;
+  sfixed32 f_sfixed32 = 11;
+  sfixed64 f_sfixed64 = 12;
+  bool f_bool = 13;
+  string f_string = 14;
+  bytes f_bytes = 15;
+  Color f_enum = 16;
+  Plain f_message = 17;
+  google.protobuf.Timestamp wkt_timestamp = 18;
+  google.protobuf.Duration wkt_duration = 19;
+  google.protobuf.StringValue wkt_string_value = 20;
+  google.protobuf.BytesValue wkt_bytes_value = 21;
+  google.protobuf.BoolValue wkt_bool_value = 22;
+  google.protobuf.DoubleValue wkt_double_value = 23;
+  google.protobuf.FloatValue wkt_float_value = 24;
+  google.protobuf.Int32Value wkt_int32_value = 25;
+  google.protobuf.UInt32Value wkt_uint32_value = 26;
+  google.protobuf.Int64Value wkt_int64_value = 27;
+  google.protobuf.UInt64Value wkt_uint64_value = 28;
+  google.protobuf.Struct wkt_struct = 29;
+  google.protobuf.Value wkt_value = 30;
+  google.protobuf.ListValue wkt_list_value = 31;
+  google.protobuf.Any wkt_any = 32;
+  google.protobuf.FieldMask wkt_field_mask = 33;
+  google.protobuf.Empty wkt_empty = 34;
+  repeated int32 rep_int32 = 35;
+  repeated string rep_string = 36;
+  repeated bytes rep_bytes = 37;
+  repeated Color rep_enum = 38;
+  repeated Plain rep_message = 39;
+  repeated google.protobuf.Timestamp rep_timestamp = 40;
+  repeated google.protobuf.Struct rep_struct = 41;
+  map<string, string> map_string_string = 42;
+  map<int64, bytes> map_int64_bytes = 43;
+  map<string, Plain> map_string_message = 44;
+  optional int32 opt_int32 = 45;
+  optional string opt_string = 46;
+  optional bytes opt_bytes = 47;
+  optional Color opt_enum = 48;
+  optional Plain opt_message = 49;
+  optional google.protobuf.Timestamp opt_timestamp = 50;
+  oneof choice {
+    string one_string = 51;
+    bytes one_bytes = 52;
+    Color one_enum = 53;
+    Plain one_message = 54;
+    google.protobuf.Int64Value one_int64_value = 55;
+  }
+}
+
+message HeaderFields {
+  option (sphere.binding.default_location) = BINDING_LOCATION_HEADER;
+
+  double f_double = 1;
+  float f_float = 2;
+  int32 f_int32 = 3;
+  int64 f_int64 = 4;
+  uint32 f_uint32 = 5;
+  uint64 f_uint64 = 6;
+  sint32 f_sint32 = 7;
+  sint64 f_sint64 = 8;
+  fixed32 f_fixed32 = 9;
+  fixed64 f_fixed64 = 10;
+  sfixed32 f_sfixed32 = 11;
+  sfixed64 f_sfixed64 = 12;
+  bool f_bool = 13;
+  string f_string = 14;
+  bytes f_bytes = 15;
+  Color f_enum = 16;
+  Plain f_message = 17;
+  google.protobuf.Timestamp wkt_timestamp = 18;
+  google.protobuf.Duration wkt_duration = 19;
+  google.protobuf.StringValue wkt_string_value = 20;
+  google.protobuf.BytesValue wkt_bytes_value = 21;
+  google.protobuf.BoolValue wkt_bool_value = 22;
+  google.protobuf.DoubleValue wkt_double_value = 23;
+  google.protobuf.FloatValue wkt_float_value = 24;
+  google.protobuf.Int32Value wkt_int32_value = 25;
+  google.protobuf.UInt32Value wkt_uint32_value = 26;
+  google.protobuf.Int64Value wkt_int64_value = 27;
+  google.protobuf.UInt64Value wkt_uint64_value = 28;
+  google.protobuf.Struct wkt_struct = 29;
+  google.protobuf.Value wkt_value = 30;
+  google.protobuf.ListValue wkt_list_value = 31;
+  google.protobuf.Any wkt_any = 32;
+  google.protobuf.FieldMask wkt_field_mask = 33;
+  google.protobuf.Empty wkt_empty = 34;
+  repeated int32 rep_int32 = 35;
+  repeated string rep_string = 36;
+  repeated bytes rep_bytes = 37;
+  repeated Color rep_enum = 38;
+  repeated Plain rep_message = 39;
+  repeated google.protobuf.Timestamp rep_timestamp = 40;
+  repeated google.protobuf.Struct rep_struct = 41;
+  map<string, string> map_string_string = 42;
+  map<int64, bytes> map_int64_bytes = 43;
+  map<string, Plain> map_string_message = 44;
+  optional int32 opt_int32 = 45;
+  optional string opt_string = 46;
+  optional bytes opt_bytes = 47;
+  optional Color opt_enum = 48;
+  optional Plain opt_message = 49;
+  optional google.protobuf.Timestamp opt_timestamp = 50;
+  oneof choice {
+    string one_string = 51;
+    bytes one_bytes = 52;
+    Color one_enum = 53;
+    Plain one_message = 54;
+    google.protobuf.Int64Value one_int64_value = 55;
+  }
+}
+
+message FormFields {
+  option (sphere.binding.default_location) = BINDING_LOCATION_FORM;
+
+  double f_double = 1;
+  float f_float = 2;
+  int32 f_int32 = 3;
+  int64 f_int64 = 4;
+  uint32 f_uint32 = 5;
+  uint64 f_uint64 = 6;
+  sint32 f_sint32 = 7;
+  sint64 f_sint64 = 8;
+  fixed32 f_fixed32 = 9;
+  fixed64 f_fixed64 = 10;
+  sfixed32 f_sfixed32 = 11;
+  sfixed64 f_sfixed64 = 12;
+  bool f_bool = 13;
+  string f_string = 14;
+  bytes f_bytes = 15;
+  Color f_enum = 16;
+  Plain f_message = 17;
+  google.protobuf.Timestamp wkt_timestamp = 18;
+  google.protobuf.Duration wkt_duration = 19;
+  google.protobuf.StringValue wkt_string_value = 20;
+  google.protobuf.BytesValue wkt_bytes_value = 21;
+  google.protobuf.BoolValue wkt_bool_value = 22;
+  google.protobuf.DoubleValue wkt_double_value = 23;
+  google.protobuf.FloatValue wkt_float_value = 24;
+  google.protobuf.Int32Value wkt_int32_value = 25;
+  google.protobuf.UInt32Value wkt_uint32_value = 26;
+  google.protobuf.Int64Value wkt_int64_value = 27;
+  google.protobuf.UInt64Value wkt_uint64_value = 28;
+  google.protobuf.Struct wkt_struct = 29;
+  google.protobuf.Value wkt_value = 30;
+  google.protobuf.ListValue wkt_list_value = 31;
+  google.protobuf.Any wkt_any = 32;
+  google.protobuf.FieldMask wkt_field_mask = 33;
+  google.protobuf.Empty wkt_empty = 34;
+  repeated int32 rep_int32 = 35;
+  repeated string rep_string = 36;
+  repeated bytes rep_bytes = 37;
+  repeated Color rep_enum = 38;
+  repeated Plain rep_message = 39;
+  repeated google.protobuf.Timestamp rep_timestamp = 40;
+  repeated google.protobuf.Struct rep_struct = 41;
+  map<string, string> map_string_string = 42;
+  map<int64, bytes> map_int64_bytes = 43;
+  map<string, Plain> map_string_message = 44;
+  optional int32 opt_int32 = 45;
+  optional string opt_string = 46;
+  optional bytes opt_bytes = 47;
+  optional Color opt_enum = 48;
+  optional Plain opt_message = 49;
+  optional google.protobuf.Timestamp opt_timestamp = 50;
+  oneof choice {
+    string one_string = 51;
+    bytes one_bytes = 52;
+    Color one_enum = 53;
+    Plain one_message = 54;
+    google.protobuf.Int64Value one_int64_value = 55;
+  }
+}
