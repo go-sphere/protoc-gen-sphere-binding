@@ -151,11 +151,11 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 				continue
 			}
 			// protoc-gen-go emits every oneof member in its own wrapper struct
-			// named `{ParentMessage}_{Field}` with a single field `{Field}`, so
-			// the tag must be keyed by that wrapper struct rather than the parent
-			// message (which has no such field).
-			wrapperName := message.GoIdent.GoName + "_" + field.GoName
-			tags[wrapperName] = map[string]*structtag.Tags{field.GoName: fieldTags}
+			// with a single field `{Field}`, so the tag is keyed by that wrapper.
+			// field.GoIdent is the wrapper's name, including the "_" suffix
+			// protoc-gen-go adds when `{Message}_{Field}` collides with a
+			// nested type.
+			tags[field.GoIdent.GoName] = map[string]*structtag.Tags{field.GoName: fieldTags}
 		}
 	}
 

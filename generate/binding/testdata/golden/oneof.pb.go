@@ -181,6 +181,74 @@ func (*OneofRequest_Note) isOneofRequest_Payload() {}
 
 func (*OneofRequest_Detail) isOneofRequest_Payload() {}
 
+// The nested message Text takes the Go name WrapperCollision_Text, so
+// protoc-gen-go names the oneof wrapper WrapperCollision_Text_ instead.
+type WrapperCollision struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Kind:
+	//
+	//	*WrapperCollision_Text_
+	Kind          isWrapperCollision_Kind `protobuf_oneof:"kind"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WrapperCollision) Reset() {
+	*x = WrapperCollision{}
+	mi := &file_oneof_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WrapperCollision) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WrapperCollision) ProtoMessage() {}
+
+func (x *WrapperCollision) ProtoReflect() protoreflect.Message {
+	mi := &file_oneof_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WrapperCollision.ProtoReflect.Descriptor instead.
+func (*WrapperCollision) Descriptor() ([]byte, []int) {
+	return file_oneof_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *WrapperCollision) GetKind() isWrapperCollision_Kind {
+	if x != nil {
+		return x.Kind
+	}
+	return nil
+}
+
+func (x *WrapperCollision) GetText() string {
+	if x != nil {
+		if x, ok := x.Kind.(*WrapperCollision_Text_); ok {
+			return x.Text
+		}
+	}
+	return ""
+}
+
+type isWrapperCollision_Kind interface {
+	isWrapperCollision_Kind()
+}
+
+type WrapperCollision_Text_ struct {
+	Text string `protobuf:"bytes,1,opt,name=text,proto3,oneof" json:"-" query:"text"`
+}
+
+func (*WrapperCollision_Text_) isWrapperCollision_Kind() {}
+
 type OneofResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ok            string                 `protobuf:"bytes,1,opt,name=ok,proto3" json:"ok,omitempty"`
@@ -190,7 +258,7 @@ type OneofResponse struct {
 
 func (x *OneofResponse) Reset() {
 	*x = OneofResponse{}
-	mi := &file_oneof_proto_msgTypes[1]
+	mi := &file_oneof_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -202,7 +270,7 @@ func (x *OneofResponse) String() string {
 func (*OneofResponse) ProtoMessage() {}
 
 func (x *OneofResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_oneof_proto_msgTypes[1]
+	mi := &file_oneof_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -215,7 +283,7 @@ func (x *OneofResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OneofResponse.ProtoReflect.Descriptor instead.
 func (*OneofResponse) Descriptor() ([]byte, []int) {
-	return file_oneof_proto_rawDescGZIP(), []int{1}
+	return file_oneof_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *OneofResponse) GetOk() string {
@@ -236,7 +304,7 @@ type OneofRequest_Filter struct {
 
 func (x *OneofRequest_Filter) Reset() {
 	*x = OneofRequest_Filter{}
-	mi := &file_oneof_proto_msgTypes[2]
+	mi := &file_oneof_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -248,7 +316,7 @@ func (x *OneofRequest_Filter) String() string {
 func (*OneofRequest_Filter) ProtoMessage() {}
 
 func (x *OneofRequest_Filter) ProtoReflect() protoreflect.Message {
-	mi := &file_oneof_proto_msgTypes[2]
+	mi := &file_oneof_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -278,6 +346,50 @@ func (x *OneofRequest_Filter) GetLimit() int64 {
 	return 0
 }
 
+type WrapperCollision_Text struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Body          string                 `protobuf:"bytes,1,opt,name=body,proto3" json:"body,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WrapperCollision_Text) Reset() {
+	*x = WrapperCollision_Text{}
+	mi := &file_oneof_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WrapperCollision_Text) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WrapperCollision_Text) ProtoMessage() {}
+
+func (x *WrapperCollision_Text) ProtoReflect() protoreflect.Message {
+	mi := &file_oneof_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WrapperCollision_Text.ProtoReflect.Descriptor instead.
+func (*WrapperCollision_Text) Descriptor() ([]byte, []int) {
+	return file_oneof_proto_rawDescGZIP(), []int{1, 0}
+}
+
+func (x *WrapperCollision_Text) GetBody() string {
+	if x != nil {
+		return x.Body
+	}
+	return ""
+}
+
 var File_oneof_proto protoreflect.FileDescriptor
 
 const file_oneof_proto_rawDesc = "" +
@@ -294,7 +406,12 @@ const file_oneof_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x03R\x05limit:\x06\xa0\x9c\xa6\x89\x04\x01B \n" +
 	"\bselector\x12\x14\U0001c989\x04\x02\xfa\x9c\xa6\x89\x04\bvalidateB\t\n" +
-	"\apayload\"\x1f\n" +
+	"\apayload\"T\n" +
+	"\x10WrapperCollision\x12\x14\n" +
+	"\x04text\x18\x01 \x01(\tH\x00R\x04text\x1a\x1a\n" +
+	"\x04Text\x12\x12\n" +
+	"\x04body\x18\x01 \x01(\tR\x04bodyB\x0e\n" +
+	"\x04kind\x12\x06\U0001c989\x04\x01\"\x1f\n" +
 	"\rOneofResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\tR\x02okB^Z\\github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/oneofv1;oneofv1b\x06proto3"
 
@@ -310,15 +427,17 @@ func file_oneof_proto_rawDescGZIP() []byte {
 	return file_oneof_proto_rawDescData
 }
 
-var file_oneof_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_oneof_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_oneof_proto_goTypes = []any{
-	(*OneofRequest)(nil),        // 0: testdata.oneof.v1.OneofRequest
-	(*OneofResponse)(nil),       // 1: testdata.oneof.v1.OneofResponse
-	(*OneofRequest_Filter)(nil), // 2: testdata.oneof.v1.OneofRequest.Filter
+	(*OneofRequest)(nil),          // 0: testdata.oneof.v1.OneofRequest
+	(*WrapperCollision)(nil),      // 1: testdata.oneof.v1.WrapperCollision
+	(*OneofResponse)(nil),         // 2: testdata.oneof.v1.OneofResponse
+	(*OneofRequest_Filter)(nil),   // 3: testdata.oneof.v1.OneofRequest.Filter
+	(*WrapperCollision_Text)(nil), // 4: testdata.oneof.v1.WrapperCollision.Text
 }
 var file_oneof_proto_depIdxs = []int32{
-	2, // 0: testdata.oneof.v1.OneofRequest.filter:type_name -> testdata.oneof.v1.OneofRequest.Filter
-	2, // 1: testdata.oneof.v1.OneofRequest.detail:type_name -> testdata.oneof.v1.OneofRequest.Filter
+	3, // 0: testdata.oneof.v1.OneofRequest.filter:type_name -> testdata.oneof.v1.OneofRequest.Filter
+	3, // 1: testdata.oneof.v1.OneofRequest.detail:type_name -> testdata.oneof.v1.OneofRequest.Filter
 	2, // [2:2] is the sub-list for method output_type
 	2, // [2:2] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
@@ -337,13 +456,16 @@ func file_oneof_proto_init() {
 		(*OneofRequest_Note)(nil),
 		(*OneofRequest_Detail)(nil),
 	}
+	file_oneof_proto_msgTypes[1].OneofWrappers = []any{
+		(*WrapperCollision_Text_)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_oneof_proto_rawDesc), len(file_oneof_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

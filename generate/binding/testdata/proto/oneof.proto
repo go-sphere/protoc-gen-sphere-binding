@@ -46,6 +46,20 @@ message OneofRequest {
   }
 }
 
+// The nested message Text takes the Go name WrapperCollision_Text, so
+// protoc-gen-go names the oneof wrapper WrapperCollision_Text_ instead.
+message WrapperCollision {
+  message Text {
+    string body = 1;
+  }
+
+  oneof kind {
+    option (sphere.binding.default_oneof_location) = BINDING_LOCATION_QUERY;
+
+    string text = 1;
+  }
+}
+
 message OneofResponse {
   string ok = 1;
 }

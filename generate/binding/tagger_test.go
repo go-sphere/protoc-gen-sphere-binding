@@ -187,6 +187,21 @@ func TestExtractFile_NestedDoesNotInheritParentQuery(t *testing.T) {
 	}
 }
 
+func TestExtractFile_OneofWrapperNameCollision(t *testing.T) {
+	set := testutil.LoadDescriptorSet(t, "testdata/pb/oneof.pb")
+	plugin := testutil.MustCreatePlugin(t, set, "oneof.proto")
+	file := testutil.FileToGenerate(t, plugin)
+
+	tags, err := extractFile(file, DefaultConfig())
+	if err != nil {
+		t.Fatalf("extractFile: %v", err)
+	}
+	wrapper := tags["WrapperCollision_Text_"]["Text"]
+	if wrapper == nil || !strings.Contains(wrapper.String(), `query:"text"`) {
+		t.Fatalf("tags must be keyed by the generated wrapper WrapperCollision_Text_, got %v", tags["WrapperCollision_Text_"])
+	}
+}
+
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 	if !cfg.AutoRemoveJSON {
