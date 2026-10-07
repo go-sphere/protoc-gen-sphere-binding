@@ -41,15 +41,10 @@ func TestScalarBindabilityContract(t *testing.T) {
 			t.Fatalf("message %s has no query/uri/header/form default_location", message.Desc.Name())
 		}
 		for _, field := range message.Fields {
-			// Mirror extractMessage: real oneof members inherit the oneof's
-			// default location (none is set in the fixture).
+			// The table is a per-type rule, so every field — real oneof members
+			// included — is checked at the message's location, as if declared
+			// explicitly. protoc-gen-sphere's copy of this test does the same.
 			fieldLocation, fieldAutoTags := location, autoTags
-			if field.Oneof != nil && !field.Oneof.Desc.IsSynthetic() {
-				fieldLocation, fieldAutoTags = resolveLocationAndAutoTags(
-					field.Oneof.Desc.Options(), binding.E_DefaultOneofLocation, binding.E_DefaultOneofAutoTags,
-					location, autoTags,
-				)
-			}
 			decision := "accept"
 			tags, err := extractField(field, fieldLocation, fieldAutoTags, cfg)
 			switch {

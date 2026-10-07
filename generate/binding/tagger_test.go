@@ -178,6 +178,13 @@ func TestExtractFile_NestedDoesNotInheritParentQuery(t *testing.T) {
 	if wrapper == nil || !strings.Contains(wrapper.String(), `uri:"by_name"`) {
 		t.Fatalf("oneof wrapper ByName should be tagged on OneofRequest_ByName, got %v", wrapper)
 	}
+
+	// The payload oneof sets no location, so it must not inherit QUERY.
+	for _, name := range []string{"OneofRequest_Note", "OneofRequest_Detail"} {
+		if wrapperTags, ok := tags[name]; ok {
+			t.Errorf("oneof wrapper %s inherited the message location: %v", name, wrapperTags)
+		}
+	}
 }
 
 func TestDefaultConfig(t *testing.T) {

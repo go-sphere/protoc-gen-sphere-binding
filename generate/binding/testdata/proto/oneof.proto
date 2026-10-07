@@ -36,6 +36,14 @@ message OneofRequest {
   // message default (QUERY) and the plugin would reject it (message fields are
   // not scalar-bindable to query/uri/header).
   Filter filter = 4 [(sphere.binding.location) = BINDING_LOCATION_JSON];
+
+  // A oneof without default_oneof_location does not inherit the message's
+  // QUERY default: its members stay in the JSON body, so the message-typed
+  // member is accepted and neither wrapper gets query tags.
+  oneof payload {
+    string note = 5;
+    Filter detail = 6;
+  }
 }
 
 message OneofResponse {

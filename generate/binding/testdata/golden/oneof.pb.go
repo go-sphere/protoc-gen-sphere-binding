@@ -41,7 +41,16 @@ type OneofRequest struct {
 	// pinned to JSON explicitly. Without this override it would inherit the
 	// message default (QUERY) and the plugin would reject it (message fields are
 	// not scalar-bindable to query/uri/header).
-	Filter        *OneofRequest_Filter `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Filter *OneofRequest_Filter `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	// A oneof without default_oneof_location does not inherit the message's
+	// QUERY default: its members stay in the JSON body, so the message-typed
+	// member is accepted and neither wrapper gets query tags.
+	//
+	// Types that are valid to be assigned to Payload:
+	//
+	//	*OneofRequest_Note
+	//	*OneofRequest_Detail
+	Payload       isOneofRequest_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,6 +124,31 @@ func (x *OneofRequest) GetFilter() *OneofRequest_Filter {
 	return nil
 }
 
+func (x *OneofRequest) GetPayload() isOneofRequest_Payload {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *OneofRequest) GetNote() string {
+	if x != nil {
+		if x, ok := x.Payload.(*OneofRequest_Note); ok {
+			return x.Note
+		}
+	}
+	return ""
+}
+
+func (x *OneofRequest) GetDetail() *OneofRequest_Filter {
+	if x != nil {
+		if x, ok := x.Payload.(*OneofRequest_Detail); ok {
+			return x.Detail
+		}
+	}
+	return nil
+}
+
 type isOneofRequest_Selector interface {
 	isOneofRequest_Selector()
 }
@@ -130,6 +164,22 @@ type OneofRequest_ById struct {
 func (*OneofRequest_ByName) isOneofRequest_Selector() {}
 
 func (*OneofRequest_ById) isOneofRequest_Selector() {}
+
+type isOneofRequest_Payload interface {
+	isOneofRequest_Payload()
+}
+
+type OneofRequest_Note struct {
+	Note string `protobuf:"bytes,5,opt,name=note,proto3,oneof"`
+}
+
+type OneofRequest_Detail struct {
+	Detail *OneofRequest_Filter `protobuf:"bytes,6,opt,name=detail,proto3,oneof"`
+}
+
+func (*OneofRequest_Note) isOneofRequest_Payload() {}
+
+func (*OneofRequest_Detail) isOneofRequest_Payload() {}
 
 type OneofResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -232,16 +282,19 @@ var File_oneof_proto protoreflect.FileDescriptor
 
 const file_oneof_proto_rawDesc = "" +
 	"\n" +
-	"\voneof.proto\x12\x11testdata.oneof.v1\x1a\x1csphere/binding/binding.proto\"\x80\x02\n" +
+	"\voneof.proto\x12\x11testdata.oneof.v1\x1a\x1csphere/binding/binding.proto\"\xe3\x02\n" +
 	"\fOneofRequest\x12\x14\n" +
 	"\x05outer\x18\x01 \x01(\tR\x05outer\x12\x19\n" +
 	"\aby_name\x18\x02 \x01(\tH\x00R\x06byName\x12\x15\n" +
 	"\x05by_id\x18\x03 \x01(\x03H\x00R\x04byId\x12F\n" +
-	"\x06filter\x18\x04 \x01(\v2&.testdata.oneof.v1.OneofRequest.FilterB\x06\xc0\x9d\xa6\x89\x04\x03R\x06filter\x1a6\n" +
+	"\x06filter\x18\x04 \x01(\v2&.testdata.oneof.v1.OneofRequest.FilterB\x06\xc0\x9d\xa6\x89\x04\x03R\x06filter\x12\x14\n" +
+	"\x04note\x18\x05 \x01(\tH\x01R\x04note\x12@\n" +
+	"\x06detail\x18\x06 \x01(\v2&.testdata.oneof.v1.OneofRequest.FilterH\x01R\x06detail\x1a6\n" +
 	"\x06Filter\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x03R\x05limit:\x06\xa0\x9c\xa6\x89\x04\x01B \n" +
-	"\bselector\x12\x14\U0001c989\x04\x02\xfa\x9c\xa6\x89\x04\bvalidate\"\x1f\n" +
+	"\bselector\x12\x14\U0001c989\x04\x02\xfa\x9c\xa6\x89\x04\bvalidateB\t\n" +
+	"\apayload\"\x1f\n" +
 	"\rOneofResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\tR\x02okB^Z\\github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/oneofv1;oneofv1b\x06proto3"
 
@@ -265,11 +318,12 @@ var file_oneof_proto_goTypes = []any{
 }
 var file_oneof_proto_depIdxs = []int32{
 	2, // 0: testdata.oneof.v1.OneofRequest.filter:type_name -> testdata.oneof.v1.OneofRequest.Filter
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 1: testdata.oneof.v1.OneofRequest.detail:type_name -> testdata.oneof.v1.OneofRequest.Filter
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_oneof_proto_init() }
@@ -280,6 +334,8 @@ func file_oneof_proto_init() {
 	file_oneof_proto_msgTypes[0].OneofWrappers = []any{
 		(*OneofRequest_ByName)(nil),
 		(*OneofRequest_ById)(nil),
+		(*OneofRequest_Note)(nil),
+		(*OneofRequest_Detail)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

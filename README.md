@@ -250,7 +250,7 @@ Nested messages do not inherit the enclosing message's default location: a neste
 
 ### Oneof Fields
 
-Oneof members are tagged through the oneof's options. `default_oneof_location` / `default_oneof_auto_tags` apply to every member, an explicit `(sphere.binding.location)` on a member still wins, and an unset oneof location is inherited from the enclosing message. `protoc-gen-go` emits oneof members in wrapper structs named `{Message}_{Field}`, so that is where the tags are written:
+Oneof members are tagged through the oneof's options. `default_oneof_location` / `default_oneof_auto_tags` apply to every member, an explicit `(sphere.binding.location)` on a member still wins. A oneof does not inherit the message's `default_location`: without `default_oneof_location` its members stay in the JSON body, which is the only place `protoc-gen-sphere` binds them from (it warns on any other location declared on a oneof). `protoc-gen-go` emits oneof members in wrapper structs named `{Message}_{Field}`, so that is where the tags are written:
 
 ```protobuf
 message EventRequest {

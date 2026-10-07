@@ -128,11 +128,17 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 		if oneOf.Desc.IsSynthetic() {
 			continue
 		}
+		// A oneof does not inherit the message's default_location: its members
+		// bind through the JSON body unless default_oneof_location or a member's
+		// own location says otherwise. protoc-gen-sphere only binds real oneof
+		// members from the body, so inheriting QUERY/URI/HEADER here would emit
+		// tags the runtime never reads, or reject message-typed members outright.
+		// Auto tags are still inherited.
 		oneOfLocation, oneOfAutoTags := resolveLocationAndAutoTags(
 			oneOf.Desc.Options(),
 			binding.E_DefaultOneofLocation,
 			binding.E_DefaultOneofAutoTags,
-			location,
+			binding.BindingLocation_BINDING_LOCATION_UNSPECIFIED,
 			autoTags,
 		)
 
