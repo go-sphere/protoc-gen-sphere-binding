@@ -8,11 +8,11 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 )
 
-// TestBindingLocationKindValidation verifies BUG-47 on the binding side: a
-// map / message / bytes field bound to QUERY / URI / HEADER must be rejected at
-// generation time instead of silently emitting a struct tag the runtime binder
-// cannot satisfy. FORM is exempt (form data can carry bytes / files), and
-// scalar fields pass through.
+// TestBindingLocationKindValidation verifies on the binding side that a map /
+// message (well-known types included) / bytes field bound to QUERY / URI /
+// HEADER is rejected at generation time instead of silently emitting a struct
+// tag the runtime binder cannot satisfy. FORM is exempt (form data can carry
+// bytes / files), and scalar fields pass through.
 func TestBindingLocationKindValidation(t *testing.T) {
 	set := testutil.LoadDescriptorSet(t, "testdata/pb/invalid_binding.pb")
 	plugin := testutil.MustCreatePlugin(t, set, "invalid_binding.proto")
@@ -30,15 +30,19 @@ func TestBindingLocationKindValidation(t *testing.T) {
 	}{
 		{
 			"BadQueryMessage",
-			"field `testdata.invalidbinding.v1.BadQueryMessage.inner` of type `message` cannot be bound to \"query\": only scalar types (and well-known scalar wrappers) are supported there",
+			"field `testdata.invalidbinding.v1.BadQueryMessage.inner` of type `message` cannot be bound to \"query\": only scalar and enum types are supported there",
 		},
 		{
 			"BadUriMap",
-			"field `testdata.invalidbinding.v1.BadUriMap.m` of type `map` cannot be bound to \"uri\": only scalar types (and well-known scalar wrappers) are supported there",
+			"field `testdata.invalidbinding.v1.BadUriMap.m` of type `map` cannot be bound to \"uri\": only scalar and enum types are supported there",
+		},
+		{
+			"BadQueryTimestamp",
+			"field `testdata.invalidbinding.v1.BadQueryTimestamp.since` of type `message` cannot be bound to \"query\": only scalar and enum types are supported there",
 		},
 		{
 			"BadHeaderBytes",
-			"field `testdata.invalidbinding.v1.BadHeaderBytes.data` of type `bytes` cannot be bound to \"header\": only scalar types (and well-known scalar wrappers) are supported there",
+			"field `testdata.invalidbinding.v1.BadHeaderBytes.data` of type `bytes` cannot be bound to \"header\": only scalar and enum types are supported there",
 		},
 	}
 	for _, tt := range bad {

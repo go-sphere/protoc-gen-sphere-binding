@@ -4,29 +4,27 @@ package testdata.integration.v1;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "google/protobuf/wrappers.proto";
 import "sphere/binding/binding.proto";
 
 option go_package = "github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/integrationv1;integrationv1";
 
-// Item carries a map and a oneof in the JSON body. With no binding location set
-// they keep their json tags and receive no query/uri/header/form tag.
+// Item carries a map and proto3 optional fields in the JSON body. With no
+// binding location set they keep their json tags and receive no
+// query/uri/header/form tag.
 message Item {
   string name = 1;
   int64 value = 2;
   map<string, string> labels = 3;
-  oneof kind {
-    string text = 4;
-    int64 number = 5;
-  }
+  optional string text = 4;
+  optional int64 number = 5;
 }
 
-// CreateItemRequest mixes uri / header / well-known query bindings with a nested
-// message that must stay in the JSON body.
+// CreateItemRequest mixes uri / header bindings with a well-known type and a
+// nested message that must stay in the JSON body.
 message CreateItemRequest {
   string tenant_id = 1 [(sphere.binding.location) = BINDING_LOCATION_URI];
   string request_id = 2 [(sphere.binding.location) = BINDING_LOCATION_HEADER];
-  google.protobuf.Timestamp not_before = 3 [(sphere.binding.location) = BINDING_LOCATION_QUERY];
+  google.protobuf.Timestamp not_before = 3;
   Item item = 4;
 }
 
@@ -39,15 +37,23 @@ message UploadItemRequest {
   int64 size = 3;
 }
 
-// ListItemsRequest binds well-known scalar wrappers as query params; these are
-// allowed because they wrap a single scalar value.
+// ListItemsRequest binds plain and proto3 optional scalars as query params.
 message ListItemsRequest {
   option (sphere.binding.default_location) = BINDING_LOCATION_QUERY;
 
   string tenant_id = 1 [(sphere.binding.location) = BINDING_LOCATION_URI];
-  google.protobuf.Timestamp created_after = 2;
-  google.protobuf.Duration max_age = 3;
-  google.protobuf.StringValue keyword = 4;
-  google.protobuf.Int64Value limit = 5;
-  google.protobuf.BoolValue active = 6;
+  int64 created_after_unix = 2;
+  int64 max_age_seconds = 3;
+  optional string keyword = 4;
+  optional int64 limit = 5;
+  optional bool active = 6;
+}
+
+// ItemResponse carries a oneof, which keeps its json tags on the wrapper.
+message ItemResponse {
+  Item item = 1;
+  oneof source {
+    string imported_from = 2;
+    google.protobuf.Duration processing_time = 3;
+  }
 }

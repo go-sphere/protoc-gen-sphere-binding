@@ -13,8 +13,10 @@
 #   kind     - fieldKindDesc, as printed in the generation-time error
 #   decision - accept: the field is bound in that location
 #              reject: generation fails, the field has no single-token form
-# QUERY/URI/HEADER accept scalars, enums and the 11 well-known scalar wrappers
-# (Timestamp, Duration, wrapperspb.*Value); FORM accepts every field.
+# QUERY/URI/HEADER accept scalars and enums only: every message field is
+# rejected, well-known types (Timestamp, Duration, wrapperspb.*Value) included,
+# because the httpx form decoders cannot read them from a single token. FORM
+# accepts every field.
 
 query  f_double           double   accept
 query  f_float            float    accept
@@ -33,17 +35,17 @@ query  f_string           string   accept
 query  f_bytes            bytes    reject
 query  f_enum             enum     accept
 query  f_message          message  reject
-query  wkt_timestamp      message  accept
-query  wkt_duration       message  accept
-query  wkt_string_value   message  accept
-query  wkt_bytes_value    message  accept
-query  wkt_bool_value     message  accept
-query  wkt_double_value   message  accept
-query  wkt_float_value    message  accept
-query  wkt_int32_value    message  accept
-query  wkt_uint32_value   message  accept
-query  wkt_int64_value    message  accept
-query  wkt_uint64_value   message  accept
+query  wkt_timestamp      message  reject
+query  wkt_duration       message  reject
+query  wkt_string_value   message  reject
+query  wkt_bytes_value    message  reject
+query  wkt_bool_value     message  reject
+query  wkt_double_value   message  reject
+query  wkt_float_value    message  reject
+query  wkt_int32_value    message  reject
+query  wkt_uint32_value   message  reject
+query  wkt_int64_value    message  reject
+query  wkt_uint64_value   message  reject
 query  wkt_struct         message  reject
 query  wkt_value          message  reject
 query  wkt_list_value     message  reject
@@ -55,7 +57,7 @@ query  rep_string         string   accept
 query  rep_bytes          bytes    reject
 query  rep_enum           enum     accept
 query  rep_message        message  reject
-query  rep_timestamp      message  accept
+query  rep_timestamp      message  reject
 query  rep_struct         message  reject
 query  map_string_string  map      reject
 query  map_int64_bytes    map      reject
@@ -65,12 +67,12 @@ query  opt_string         string   accept
 query  opt_bytes          bytes    reject
 query  opt_enum           enum     accept
 query  opt_message        message  reject
-query  opt_timestamp      message  accept
+query  opt_timestamp      message  reject
 query  one_string         string   accept
 query  one_bytes          bytes    reject
 query  one_enum           enum     accept
 query  one_message        message  reject
-query  one_int64_value    message  accept
+query  one_int64_value    message  reject
 
 uri    f_double           double   accept
 uri    f_float            float    accept
@@ -89,17 +91,17 @@ uri    f_string           string   accept
 uri    f_bytes            bytes    reject
 uri    f_enum             enum     accept
 uri    f_message          message  reject
-uri    wkt_timestamp      message  accept
-uri    wkt_duration       message  accept
-uri    wkt_string_value   message  accept
-uri    wkt_bytes_value    message  accept
-uri    wkt_bool_value     message  accept
-uri    wkt_double_value   message  accept
-uri    wkt_float_value    message  accept
-uri    wkt_int32_value    message  accept
-uri    wkt_uint32_value   message  accept
-uri    wkt_int64_value    message  accept
-uri    wkt_uint64_value   message  accept
+uri    wkt_timestamp      message  reject
+uri    wkt_duration       message  reject
+uri    wkt_string_value   message  reject
+uri    wkt_bytes_value    message  reject
+uri    wkt_bool_value     message  reject
+uri    wkt_double_value   message  reject
+uri    wkt_float_value    message  reject
+uri    wkt_int32_value    message  reject
+uri    wkt_uint32_value   message  reject
+uri    wkt_int64_value    message  reject
+uri    wkt_uint64_value   message  reject
 uri    wkt_struct         message  reject
 uri    wkt_value          message  reject
 uri    wkt_list_value     message  reject
@@ -111,7 +113,7 @@ uri    rep_string         string   accept
 uri    rep_bytes          bytes    reject
 uri    rep_enum           enum     accept
 uri    rep_message        message  reject
-uri    rep_timestamp      message  accept
+uri    rep_timestamp      message  reject
 uri    rep_struct         message  reject
 uri    map_string_string  map      reject
 uri    map_int64_bytes    map      reject
@@ -121,12 +123,12 @@ uri    opt_string         string   accept
 uri    opt_bytes          bytes    reject
 uri    opt_enum           enum     accept
 uri    opt_message        message  reject
-uri    opt_timestamp      message  accept
+uri    opt_timestamp      message  reject
 uri    one_string         string   accept
 uri    one_bytes          bytes    reject
 uri    one_enum           enum     accept
 uri    one_message        message  reject
-uri    one_int64_value    message  accept
+uri    one_int64_value    message  reject
 
 header f_double           double   accept
 header f_float            float    accept
@@ -145,17 +147,17 @@ header f_string           string   accept
 header f_bytes            bytes    reject
 header f_enum             enum     accept
 header f_message          message  reject
-header wkt_timestamp      message  accept
-header wkt_duration       message  accept
-header wkt_string_value   message  accept
-header wkt_bytes_value    message  accept
-header wkt_bool_value     message  accept
-header wkt_double_value   message  accept
-header wkt_float_value    message  accept
-header wkt_int32_value    message  accept
-header wkt_uint32_value   message  accept
-header wkt_int64_value    message  accept
-header wkt_uint64_value   message  accept
+header wkt_timestamp      message  reject
+header wkt_duration       message  reject
+header wkt_string_value   message  reject
+header wkt_bytes_value    message  reject
+header wkt_bool_value     message  reject
+header wkt_double_value   message  reject
+header wkt_float_value    message  reject
+header wkt_int32_value    message  reject
+header wkt_uint32_value   message  reject
+header wkt_int64_value    message  reject
+header wkt_uint64_value   message  reject
 header wkt_struct         message  reject
 header wkt_value          message  reject
 header wkt_list_value     message  reject
@@ -167,7 +169,7 @@ header rep_string         string   accept
 header rep_bytes          bytes    reject
 header rep_enum           enum     accept
 header rep_message        message  reject
-header rep_timestamp      message  accept
+header rep_timestamp      message  reject
 header rep_struct         message  reject
 header map_string_string  map      reject
 header map_int64_bytes    map      reject
@@ -177,12 +179,12 @@ header opt_string         string   accept
 header opt_bytes          bytes    reject
 header opt_enum           enum     accept
 header opt_message        message  reject
-header opt_timestamp      message  accept
+header opt_timestamp      message  reject
 header one_string         string   accept
 header one_bytes          bytes    reject
 header one_enum           enum     accept
 header one_message        message  reject
-header one_int64_value    message  accept
+header one_int64_value    message  reject
 
 form   f_double           double   accept
 form   f_float            float    accept

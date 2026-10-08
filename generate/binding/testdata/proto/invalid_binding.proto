@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package testdata.invalidbinding.v1;
 
+import "google/protobuf/timestamp.proto";
 import "sphere/binding/binding.proto";
 
 option go_package = "github.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/invalidbindingv1;invalidbindingv1";
@@ -23,6 +24,11 @@ message BadUriMap {
 // A bytes field cannot be bound from a header token.
 message BadHeaderBytes {
   bytes data = 1 [(sphere.binding.location) = BINDING_LOCATION_HEADER];
+}
+
+// A well-known type has no single-token form the httpx query decoders read.
+message BadQueryTimestamp {
+  google.protobuf.Timestamp since = 1 [(sphere.binding.location) = BINDING_LOCATION_QUERY];
 }
 
 // Control: scalar query/uri/header bindings are valid, and bytes may be bound to

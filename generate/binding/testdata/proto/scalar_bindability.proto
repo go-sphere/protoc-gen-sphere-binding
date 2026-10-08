@@ -11,8 +11,9 @@
 // Each *Fields message carries the same field list under a different
 // default_location, so the table pins one decision per (location, field). The
 // list covers every scalar kind, enums, bytes, an arbitrary message, the 11
-// well-known scalar wrappers, other well-known messages that are NOT scalar,
-// repeated, map, proto3 optional and real oneof members. proto2 groups are not
+// well-known types with a scalar JSON form (still not bindable from a single
+// token), other well-known messages, repeated, map, proto3 optional and real
+// oneof members. proto2 groups are not
 // expressible in proto3 and are left out.
 syntax = "proto3";
 

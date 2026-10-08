@@ -12,7 +12,6 @@ import (
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
-	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -25,18 +24,16 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Item carries a map and a oneof in the JSON body. With no binding location set
-// they keep their json tags and receive no query/uri/header/form tag.
+// Item carries a map and proto3 optional fields in the JSON body. With no
+// binding location set they keep their json tags and receive no
+// query/uri/header/form tag.
 type Item struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Name   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Value  int64                  `protobuf:"varint,2,opt,name=value,proto3" json:"value,omitempty"`
-	Labels map[string]string      `protobuf:"bytes,3,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Types that are valid to be assigned to Kind:
-	//
-	//	*Item_Text
-	//	*Item_Number
-	Kind          isItem_Kind `protobuf_oneof:"kind"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Value         int64                  `protobuf:"varint,2,opt,name=value,proto3" json:"value,omitempty"`
+	Labels        map[string]string      `protobuf:"bytes,3,rep,name=labels,proto3" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Text          *string                `protobuf:"bytes,4,opt,name=text,proto3,oneof" json:"text,omitempty"`
+	Number        *int64                 `protobuf:"varint,5,opt,name=number,proto3,oneof" json:"number,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -92,54 +89,27 @@ func (x *Item) GetLabels() map[string]string {
 	return nil
 }
 
-func (x *Item) GetKind() isItem_Kind {
-	if x != nil {
-		return x.Kind
-	}
-	return nil
-}
-
 func (x *Item) GetText() string {
-	if x != nil {
-		if x, ok := x.Kind.(*Item_Text); ok {
-			return x.Text
-		}
+	if x != nil && x.Text != nil {
+		return *x.Text
 	}
 	return ""
 }
 
 func (x *Item) GetNumber() int64 {
-	if x != nil {
-		if x, ok := x.Kind.(*Item_Number); ok {
-			return x.Number
-		}
+	if x != nil && x.Number != nil {
+		return *x.Number
 	}
 	return 0
 }
 
-type isItem_Kind interface {
-	isItem_Kind()
-}
-
-type Item_Text struct {
-	Text string `protobuf:"bytes,4,opt,name=text,proto3,oneof"`
-}
-
-type Item_Number struct {
-	Number int64 `protobuf:"varint,5,opt,name=number,proto3,oneof"`
-}
-
-func (*Item_Text) isItem_Kind() {}
-
-func (*Item_Number) isItem_Kind() {}
-
-// CreateItemRequest mixes uri / header / well-known query bindings with a nested
-// message that must stay in the JSON body.
+// CreateItemRequest mixes uri / header bindings with a well-known type and a
+// nested message that must stay in the JSON body.
 type CreateItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"-" uri:"tenant_id"`
 	RequestId     string                 `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"-" header:"request_id"`
-	NotBefore     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=not_before,json=notBefore,proto3" json:"-" query:"not_before"`
+	NotBefore     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=not_before,json=notBefore,proto3" json:"not_before,omitempty"`
 	Item          *Item                  `protobuf:"bytes,4,opt,name=item,proto3" json:"item,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -264,18 +234,17 @@ func (x *UploadItemRequest) GetSize() int64 {
 	return 0
 }
 
-// ListItemsRequest binds well-known scalar wrappers as query params; these are
-// allowed because they wrap a single scalar value.
+// ListItemsRequest binds plain and proto3 optional scalars as query params.
 type ListItemsRequest struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	TenantId      string                  `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"-" uri:"tenant_id"`
-	CreatedAfter  *timestamppb.Timestamp  `protobuf:"bytes,2,opt,name=created_after,json=createdAfter,proto3" json:"-" query:"created_after"`
-	MaxAge        *durationpb.Duration    `protobuf:"bytes,3,opt,name=max_age,json=maxAge,proto3" json:"-" query:"max_age"`
-	Keyword       *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=keyword,proto3" json:"-" query:"keyword"`
-	Limit         *wrapperspb.Int64Value  `protobuf:"bytes,5,opt,name=limit,proto3" json:"-" query:"limit"`
-	Active        *wrapperspb.BoolValue   `protobuf:"bytes,6,opt,name=active,proto3" json:"-" query:"active"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TenantId         string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"-" uri:"tenant_id"`
+	CreatedAfterUnix int64                  `protobuf:"varint,2,opt,name=created_after_unix,json=createdAfterUnix,proto3" json:"-" query:"created_after_unix"`
+	MaxAgeSeconds    int64                  `protobuf:"varint,3,opt,name=max_age_seconds,json=maxAgeSeconds,proto3" json:"-" query:"max_age_seconds"`
+	Keyword          *string                `protobuf:"bytes,4,opt,name=keyword,proto3,oneof" json:"-" query:"keyword"`
+	Limit            *int64                 `protobuf:"varint,5,opt,name=limit,proto3,oneof" json:"-" query:"limit"`
+	Active           *bool                  `protobuf:"varint,6,opt,name=active,proto3,oneof" json:"-" query:"active"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ListItemsRequest) Reset() {
@@ -315,74 +284,175 @@ func (x *ListItemsRequest) GetTenantId() string {
 	return ""
 }
 
-func (x *ListItemsRequest) GetCreatedAfter() *timestamppb.Timestamp {
+func (x *ListItemsRequest) GetCreatedAfterUnix() int64 {
 	if x != nil {
-		return x.CreatedAfter
+		return x.CreatedAfterUnix
+	}
+	return 0
+}
+
+func (x *ListItemsRequest) GetMaxAgeSeconds() int64 {
+	if x != nil {
+		return x.MaxAgeSeconds
+	}
+	return 0
+}
+
+func (x *ListItemsRequest) GetKeyword() string {
+	if x != nil && x.Keyword != nil {
+		return *x.Keyword
+	}
+	return ""
+}
+
+func (x *ListItemsRequest) GetLimit() int64 {
+	if x != nil && x.Limit != nil {
+		return *x.Limit
+	}
+	return 0
+}
+
+func (x *ListItemsRequest) GetActive() bool {
+	if x != nil && x.Active != nil {
+		return *x.Active
+	}
+	return false
+}
+
+// ItemResponse carries a oneof, which keeps its json tags on the wrapper.
+type ItemResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Item  *Item                  `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	// Types that are valid to be assigned to Source:
+	//
+	//	*ItemResponse_ImportedFrom
+	//	*ItemResponse_ProcessingTime
+	Source        isItemResponse_Source `protobuf_oneof:"source"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ItemResponse) Reset() {
+	*x = ItemResponse{}
+	mi := &file_integration_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ItemResponse) ProtoMessage() {}
+
+func (x *ItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_integration_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ItemResponse.ProtoReflect.Descriptor instead.
+func (*ItemResponse) Descriptor() ([]byte, []int) {
+	return file_integration_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ItemResponse) GetItem() *Item {
+	if x != nil {
+		return x.Item
 	}
 	return nil
 }
 
-func (x *ListItemsRequest) GetMaxAge() *durationpb.Duration {
+func (x *ItemResponse) GetSource() isItemResponse_Source {
 	if x != nil {
-		return x.MaxAge
+		return x.Source
 	}
 	return nil
 }
 
-func (x *ListItemsRequest) GetKeyword() *wrapperspb.StringValue {
+func (x *ItemResponse) GetImportedFrom() string {
 	if x != nil {
-		return x.Keyword
+		if x, ok := x.Source.(*ItemResponse_ImportedFrom); ok {
+			return x.ImportedFrom
+		}
+	}
+	return ""
+}
+
+func (x *ItemResponse) GetProcessingTime() *durationpb.Duration {
+	if x != nil {
+		if x, ok := x.Source.(*ItemResponse_ProcessingTime); ok {
+			return x.ProcessingTime
+		}
 	}
 	return nil
 }
 
-func (x *ListItemsRequest) GetLimit() *wrapperspb.Int64Value {
-	if x != nil {
-		return x.Limit
-	}
-	return nil
+type isItemResponse_Source interface {
+	isItemResponse_Source()
 }
 
-func (x *ListItemsRequest) GetActive() *wrapperspb.BoolValue {
-	if x != nil {
-		return x.Active
-	}
-	return nil
+type ItemResponse_ImportedFrom struct {
+	ImportedFrom string `protobuf:"bytes,2,opt,name=imported_from,json=importedFrom,proto3,oneof"`
 }
+
+type ItemResponse_ProcessingTime struct {
+	ProcessingTime *durationpb.Duration `protobuf:"bytes,3,opt,name=processing_time,json=processingTime,proto3,oneof"`
+}
+
+func (*ItemResponse_ImportedFrom) isItemResponse_Source() {}
+
+func (*ItemResponse_ProcessingTime) isItemResponse_Source() {}
 
 var File_integration_proto protoreflect.FileDescriptor
 
 const file_integration_proto_rawDesc = "" +
 	"\n" +
-	"\x11integration.proto\x12\x17testdata.integration.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x1csphere/binding/binding.proto\"\xe6\x01\n" +
+	"\x11integration.proto\x12\x17testdata.integration.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1csphere/binding/binding.proto\"\xf8\x01\n" +
 	"\x04Item\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value\x12A\n" +
-	"\x06labels\x18\x03 \x03(\v2).testdata.integration.v1.Item.LabelsEntryR\x06labels\x12\x14\n" +
-	"\x04text\x18\x04 \x01(\tH\x00R\x04text\x12\x18\n" +
-	"\x06number\x18\x05 \x01(\x03H\x00R\x06number\x1a9\n" +
+	"\x06labels\x18\x03 \x03(\v2).testdata.integration.v1.Item.LabelsEntryR\x06labels\x12\x17\n" +
+	"\x04text\x18\x04 \x01(\tH\x00R\x04text\x88\x01\x01\x12\x1b\n" +
+	"\x06number\x18\x05 \x01(\x03H\x01R\x06number\x88\x01\x01\x1a9\n" +
 	"\vLabelsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\x06\n" +
-	"\x04kind\"\xd5\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\a\n" +
+	"\x05_textB\t\n" +
+	"\a_number\"\xcd\x01\n" +
 	"\x11CreateItemRequest\x12#\n" +
 	"\ttenant_id\x18\x01 \x01(\tB\x06\xc0\x9d\xa6\x89\x04\x02R\btenantId\x12%\n" +
 	"\n" +
-	"request_id\x18\x02 \x01(\tB\x06\xc0\x9d\xa6\x89\x04\x05R\trequestId\x12A\n" +
+	"request_id\x18\x02 \x01(\tB\x06\xc0\x9d\xa6\x89\x04\x05R\trequestId\x129\n" +
 	"\n" +
-	"not_before\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x06\xc0\x9d\xa6\x89\x04\x01R\tnotBefore\x121\n" +
+	"not_before\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tnotBefore\x121\n" +
 	"\x04item\x18\x04 \x01(\v2\x1d.testdata.integration.v1.ItemR\x04item\"p\n" +
 	"\x11UploadItemRequest\x12#\n" +
 	"\ttenant_id\x18\x01 \x01(\tB\x06\xc0\x9d\xa6\x89\x04\x02R\btenantId\x12\x1a\n" +
 	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x12\n" +
-	"\x04size\x18\x03 \x01(\x03R\x04size:\x06\xa0\x9c\xa6\x89\x04\x04\"\xd3\x02\n" +
+	"\x04size\x18\x03 \x01(\x03R\x04size:\x06\xa0\x9c\xa6\x89\x04\x04\"\x8d\x02\n" +
 	"\x10ListItemsRequest\x12#\n" +
-	"\ttenant_id\x18\x01 \x01(\tB\x06\xc0\x9d\xa6\x89\x04\x02R\btenantId\x12?\n" +
-	"\rcreated_after\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\fcreatedAfter\x122\n" +
-	"\amax_age\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\x06maxAge\x126\n" +
-	"\akeyword\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\akeyword\x121\n" +
-	"\x05limit\x18\x05 \x01(\v2\x1b.google.protobuf.Int64ValueR\x05limit\x122\n" +
-	"\x06active\x18\x06 \x01(\v2\x1a.google.protobuf.BoolValueR\x06active:\x06\xa0\x9c\xa6\x89\x04\x01BjZhgithub.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/integrationv1;integrationv1b\x06proto3"
+	"\ttenant_id\x18\x01 \x01(\tB\x06\xc0\x9d\xa6\x89\x04\x02R\btenantId\x12,\n" +
+	"\x12created_after_unix\x18\x02 \x01(\x03R\x10createdAfterUnix\x12&\n" +
+	"\x0fmax_age_seconds\x18\x03 \x01(\x03R\rmaxAgeSeconds\x12\x1d\n" +
+	"\akeyword\x18\x04 \x01(\tH\x00R\akeyword\x88\x01\x01\x12\x19\n" +
+	"\x05limit\x18\x05 \x01(\x03H\x01R\x05limit\x88\x01\x01\x12\x1b\n" +
+	"\x06active\x18\x06 \x01(\bH\x02R\x06active\x88\x01\x01:\x06\xa0\x9c\xa6\x89\x04\x01B\n" +
+	"\n" +
+	"\b_keywordB\b\n" +
+	"\x06_limitB\t\n" +
+	"\a_active\"\xb8\x01\n" +
+	"\fItemResponse\x121\n" +
+	"\x04item\x18\x01 \x01(\v2\x1d.testdata.integration.v1.ItemR\x04item\x12%\n" +
+	"\rimported_from\x18\x02 \x01(\tH\x00R\fimportedFrom\x12D\n" +
+	"\x0fprocessing_time\x18\x03 \x01(\v2\x19.google.protobuf.DurationH\x00R\x0eprocessingTimeB\b\n" +
+	"\x06sourceBjZhgithub.com/go-sphere/protoc-gen-sphere-binding/generate/binding/testdata/gen/integrationv1;integrationv1b\x06proto3"
 
 var (
 	file_integration_proto_rawDescOnce sync.Once
@@ -396,33 +466,28 @@ func file_integration_proto_rawDescGZIP() []byte {
 	return file_integration_proto_rawDescData
 }
 
-var file_integration_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_integration_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_integration_proto_goTypes = []any{
-	(*Item)(nil),                   // 0: testdata.integration.v1.Item
-	(*CreateItemRequest)(nil),      // 1: testdata.integration.v1.CreateItemRequest
-	(*UploadItemRequest)(nil),      // 2: testdata.integration.v1.UploadItemRequest
-	(*ListItemsRequest)(nil),       // 3: testdata.integration.v1.ListItemsRequest
-	nil,                            // 4: testdata.integration.v1.Item.LabelsEntry
-	(*timestamppb.Timestamp)(nil),  // 5: google.protobuf.Timestamp
-	(*durationpb.Duration)(nil),    // 6: google.protobuf.Duration
-	(*wrapperspb.StringValue)(nil), // 7: google.protobuf.StringValue
-	(*wrapperspb.Int64Value)(nil),  // 8: google.protobuf.Int64Value
-	(*wrapperspb.BoolValue)(nil),   // 9: google.protobuf.BoolValue
+	(*Item)(nil),                  // 0: testdata.integration.v1.Item
+	(*CreateItemRequest)(nil),     // 1: testdata.integration.v1.CreateItemRequest
+	(*UploadItemRequest)(nil),     // 2: testdata.integration.v1.UploadItemRequest
+	(*ListItemsRequest)(nil),      // 3: testdata.integration.v1.ListItemsRequest
+	(*ItemResponse)(nil),          // 4: testdata.integration.v1.ItemResponse
+	nil,                           // 5: testdata.integration.v1.Item.LabelsEntry
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),   // 7: google.protobuf.Duration
 }
 var file_integration_proto_depIdxs = []int32{
-	4, // 0: testdata.integration.v1.Item.labels:type_name -> testdata.integration.v1.Item.LabelsEntry
-	5, // 1: testdata.integration.v1.CreateItemRequest.not_before:type_name -> google.protobuf.Timestamp
+	5, // 0: testdata.integration.v1.Item.labels:type_name -> testdata.integration.v1.Item.LabelsEntry
+	6, // 1: testdata.integration.v1.CreateItemRequest.not_before:type_name -> google.protobuf.Timestamp
 	0, // 2: testdata.integration.v1.CreateItemRequest.item:type_name -> testdata.integration.v1.Item
-	5, // 3: testdata.integration.v1.ListItemsRequest.created_after:type_name -> google.protobuf.Timestamp
-	6, // 4: testdata.integration.v1.ListItemsRequest.max_age:type_name -> google.protobuf.Duration
-	7, // 5: testdata.integration.v1.ListItemsRequest.keyword:type_name -> google.protobuf.StringValue
-	8, // 6: testdata.integration.v1.ListItemsRequest.limit:type_name -> google.protobuf.Int64Value
-	9, // 7: testdata.integration.v1.ListItemsRequest.active:type_name -> google.protobuf.BoolValue
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	0, // 3: testdata.integration.v1.ItemResponse.item:type_name -> testdata.integration.v1.Item
+	7, // 4: testdata.integration.v1.ItemResponse.processing_time:type_name -> google.protobuf.Duration
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_integration_proto_init() }
@@ -430,9 +495,11 @@ func file_integration_proto_init() {
 	if File_integration_proto != nil {
 		return
 	}
-	file_integration_proto_msgTypes[0].OneofWrappers = []any{
-		(*Item_Text)(nil),
-		(*Item_Number)(nil),
+	file_integration_proto_msgTypes[0].OneofWrappers = []any{}
+	file_integration_proto_msgTypes[3].OneofWrappers = []any{}
+	file_integration_proto_msgTypes[4].OneofWrappers = []any{
+		(*ItemResponse_ImportedFrom)(nil),
+		(*ItemResponse_ProcessingTime)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -440,7 +507,7 @@ func file_integration_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_integration_proto_rawDesc), len(file_integration_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

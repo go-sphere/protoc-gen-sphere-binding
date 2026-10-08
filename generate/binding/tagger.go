@@ -22,10 +22,11 @@ var noJSONBinding = map[binding.BindingLocation]string{
 }
 
 // scalarBindLocations are the binding locations whose value is decoded from a
-// single string token. A map, bytes or arbitrary message field has no scalar
-// text form, so tagging it for one of these locations produces a struct tag the
-// runtime binder cannot satisfy. FORM is intentionally excluded: form data can
-// legitimately carry files/bytes. Kept in sync with protoc-gen-sphere's
+// single string token. A map, bytes or message field (well-known types
+// included) has no scalar text form the runtime decodes, so tagging it for one
+// of these locations produces a struct tag the runtime binder cannot satisfy.
+// FORM is intentionally excluded: form data can legitimately carry
+// files/bytes. Kept in sync with protoc-gen-sphere's
 // parser.checkScalarBindable; the shared fixture
 // testdata/proto/scalar_bindability.proto and its expected table
 // testdata/golden/scalar_bindability.golden pin the decisions in both repos
@@ -178,41 +179,21 @@ func extractMessage(message *protogen.Message, location binding.BindingLocation,
 }
 
 // isScalarBindable reports whether field can be bound from a single string token
-// (query/uri/header). Maps and bytes cannot; message fields are only allowed
-// when they are well-known scalar wrappers (Timestamp/Duration/wrapperspb.*Value).
-// Mirrors protoc-gen-sphere's parser.isScalarBindable; see scalarBindLocations
-// for the shared fixture that guards the two copies.
+// (query/uri/header). Maps, bytes and messages cannot: the form decoders the
+// httpx adapters use have no conversion for well-known types such as
+// Timestamp, Duration or wrapperspb.*Value either. Mirrors protoc-gen-sphere's
+// parser.isScalarBindable; see scalarBindLocations for the shared fixture that
+// guards the two copies.
 func isScalarBindable(field *protogen.Field) bool {
 	if field.Desc.IsMap() {
 		return false
 	}
 	switch field.Desc.Kind() {
-	case protoreflect.BytesKind:
+	case protoreflect.BytesKind, protoreflect.MessageKind, protoreflect.GroupKind:
 		return false
-	case protoreflect.MessageKind, protoreflect.GroupKind:
-		return isWellKnownScalarMessage(field)
 	default:
 		return true
 	}
-}
-
-// isWellKnownScalarMessage reports whether a message field is one of the
-// well-known types that carry a natural scalar representation and can therefore
-// be decoded from a single string token.
-func isWellKnownScalarMessage(field *protogen.Field) bool {
-	if field.Message == nil {
-		return false
-	}
-	switch field.Message.Desc.FullName() {
-	case "google.protobuf.Timestamp", "google.protobuf.Duration",
-		"google.protobuf.StringValue", "google.protobuf.BytesValue",
-		"google.protobuf.BoolValue",
-		"google.protobuf.DoubleValue", "google.protobuf.FloatValue",
-		"google.protobuf.Int32Value", "google.protobuf.UInt32Value",
-		"google.protobuf.Int64Value", "google.protobuf.UInt64Value":
-		return true
-	}
-	return false
 }
 
 // fieldKindDesc returns a human-readable description of a field's type for use
@@ -250,7 +231,7 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 	// Add sphere binding tags
 	if tag, ok := noJSONBinding[location]; ok {
 		if scalarBindLocations[location] && !isScalarBindable(field) {
-			return nil, fmt.Errorf("field `%s` of type `%s` cannot be bound to %q: only scalar types (and well-known scalar wrappers) are supported there",
+			return nil, fmt.Errorf("field `%s` of type `%s` cannot be bound to %q: only scalar and enum types are supported there",
 				field.Desc.FullName(),
 				fieldKindDesc(field),
 				tag,
