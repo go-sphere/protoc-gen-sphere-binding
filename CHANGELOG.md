@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.6 (2026-10-08)
+
 ### Changed
 
 - **BREAKING**: well-known types (`Timestamp`, `Duration`, `wrapperspb.*Value`)
