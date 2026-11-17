@@ -33,6 +33,6 @@ jobs:
       - name: Test
         run: make test
       # Rebuilding the fixtures must not change anything that is committed
-      # (descriptor sets and golden files).
+      # (golden files; pb/ and gen/ are gitignored).
       - name: Verify generated files
         run: git diff --exit-code

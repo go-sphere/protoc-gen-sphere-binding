@@ -6,6 +6,7 @@ package binding
 import (
 	"fmt"
 	"maps"
+	"strings"
 
 	"github.com/fatih/structtag"
 	"github.com/go-sphere/binding/sphere/binding"
@@ -79,6 +80,9 @@ func resolveLocationAndAutoTags(
 func setTag(tags *structtag.Tags, key, name string) error {
 	if key == "" {
 		return nil
+	}
+	if err := ValidateTagKey(key); err != nil {
+		return err
 	}
 	return tags.Set(&structtag.Tag{
 		Key:     key,
@@ -263,7 +267,16 @@ func extractField(field *protogen.Field, location binding.BindingLocation, autoT
 			if err != nil {
 				return nil, err
 			}
+			if parse == nil {
+				continue
+			}
 			for _, t := range parse.Tags() {
+				if err := ValidateTagKey(t.Key); err != nil {
+					return nil, fmt.Errorf("field `%s` has invalid tag key in %q: %w", field.Desc.FullName(), tag, err)
+				}
+				if strings.ContainsRune(t.String(), '`') {
+					return nil, fmt.Errorf("field `%s` tag %q cannot contain backtick", field.Desc.FullName(), tag)
+				}
 				if err = fieldTags.Set(t); err != nil {
 					return nil, err
 				}

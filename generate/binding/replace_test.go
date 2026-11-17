@@ -1,6 +1,7 @@
 package binding
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -92,6 +93,80 @@ func TestRetagSource(t *testing.T) {
 		_, _, err := RetagSource("bad.go", []byte("package p\nthis is not go"), StructTags{})
 		if err == nil {
 			t.Fatal("expected a parse error")
+		}
+	})
+
+	t.Run("handles quoted tag literals", func(t *testing.T) {
+		const quotedSrc = `package p
+
+type Foo struct {
+	Name  string "json:\"name,omitempty\""
+	Plain string
+}
+`
+		tags := StructTags{
+			"Foo": {
+				"Name":  mustTags(t, `query:"name"`),
+				"Plain": mustTags(t, `form:"plain"`),
+			},
+		}
+		out, changed, err := RetagSource("quoted.go", []byte(quotedSrc), tags)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !changed {
+			t.Fatal("expected changed = true")
+		}
+		got := string(out)
+		if !strings.Contains(got, "`json:\"name,omitempty\" query:\"name\"`") {
+			t.Errorf("quoted tag not unquoted and updated cleanly:\n%s", got)
+		}
+		if !strings.Contains(got, "`form:\"plain\"`") {
+			t.Errorf("untagged field missing form tag:\n%s", got)
+		}
+	})
+
+	t.Run("identical tag on quoted literal is not a change", func(t *testing.T) {
+		const quotedSrc = `package p
+
+type Foo struct {
+	Name string "json:\"name,omitempty\""
+}
+`
+		tags := StructTags{
+			"Foo": {"Name": mustTags(t, `json:"name,omitempty"`)},
+		}
+		out, changed, err := RetagSource("quoted.go", []byte(quotedSrc), tags)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if changed {
+			t.Fatal("setting an identical tag on a quoted literal should not count as a change")
+		}
+		if string(out) != quotedSrc {
+			t.Errorf("source should be returned verbatim when nothing changes")
+		}
+	})
+
+	t.Run("does not mutate caller StructTags order", func(t *testing.T) {
+		newTags := mustTags(t, `z:"1" a:"2"`)
+		wantOrder := slices.Clone(newTags.Keys())
+		tags := StructTags{
+			"Foo": {"Name": newTags},
+		}
+		out, changed, err := RetagSource("foo.go", []byte(retagSrc), tags)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !changed {
+			t.Fatal("expected changed = true")
+		}
+		got := string(out)
+		if !strings.Contains(got, `a:"2" z:"1"`) {
+			t.Errorf("expected sorted tags in output:\n%s", got)
+		}
+		if !slices.Equal(newTags.Keys(), wantOrder) {
+			t.Fatalf("caller StructTags mutated: got keys %v, want %v", newTags.Keys(), wantOrder)
 		}
 	})
 }

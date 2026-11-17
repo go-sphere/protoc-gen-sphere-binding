@@ -8,8 +8,10 @@ import (
 	"github.com/fatih/structtag"
 	"github.com/go-sphere/binding/sphere/binding"
 	"github.com/go-sphere/protoc-gen-sphere-binding/generate/internal/testutil"
+	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 func TestValidateTagKey(t *testing.T) {
@@ -103,6 +105,14 @@ func TestSetTag(t *testing.T) {
 		}
 		if tags.Len() != 0 {
 			t.Fatalf("expected no tags, got %q", tags.String())
+		}
+	})
+	t.Run("rejects invalid key", func(t *testing.T) {
+		for _, badKey := range []string{"bad key", "js`on", "js:on", "js\"on"} {
+			tags := &structtag.Tags{}
+			if err := setTag(tags, badKey, "name"); err == nil {
+				t.Fatalf("setTag(%q) error = nil, want error", badKey)
+			}
 		}
 	})
 }
@@ -227,4 +237,138 @@ func TestConfigValidate(t *testing.T) {
 			t.Fatalf("Validate(%v) error = nil", cfg.BindingAliases)
 		}
 	}
+}
+
+func TestExtractFile_InvalidTagKeysAndBackticks(t *testing.T) {
+	newFile := func(msg *descriptorpb.DescriptorProto) *protogen.File {
+		t.Helper()
+		fd := &descriptorpb.FileDescriptorProto{
+			Name:        proto.String("invalid_tags.proto"),
+			Package:     proto.String("tests.invalidtags"),
+			Syntax:      proto.String("proto3"),
+			Options:     &descriptorpb.FileOptions{GoPackage: proto.String("github.com/example/invalidtags")},
+			MessageType: []*descriptorpb.DescriptorProto{msg},
+		}
+		req := &pluginpb.CodeGeneratorRequest{
+			FileToGenerate: []string{"invalid_tags.proto"},
+			ProtoFile:      []*descriptorpb.FileDescriptorProto{fd},
+		}
+		plugin, err := protogen.Options{}.New(req)
+		if err != nil {
+			t.Fatalf("protogen.Options.New: %v", err)
+		}
+		return testutil.FileToGenerate(t, plugin)
+	}
+
+	t.Run("rejects invalid default_auto_tags key", func(t *testing.T) {
+		msgOpts := &descriptorpb.MessageOptions{}
+		proto.SetExtension(msgOpts, binding.E_DefaultAutoTags, []string{"bad key"})
+		file := newFile(&descriptorpb.DescriptorProto{
+			Name:    proto.String("Req"),
+			Options: msgOpts,
+			Field: []*descriptorpb.FieldDescriptorProto{{
+				Name:     proto.String("name"),
+				Number:   proto.Int32(1),
+				JsonName: proto.String("name"),
+				Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				Label:    descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+			}},
+		})
+		if _, err := extractFile(file, DefaultConfig()); err == nil {
+			t.Fatal("expected error for invalid default_auto_tags key")
+		}
+	})
+
+	t.Run("rejects invalid default_oneof_auto_tags key", func(t *testing.T) {
+		oneofOpts := &descriptorpb.OneofOptions{}
+		proto.SetExtension(oneofOpts, binding.E_DefaultOneofAutoTags, []string{"bad:key"})
+		file := newFile(&descriptorpb.DescriptorProto{
+			Name: proto.String("Req"),
+			OneofDecl: []*descriptorpb.OneofDescriptorProto{{
+				Name:    proto.String("choice"),
+				Options: oneofOpts,
+			}},
+			Field: []*descriptorpb.FieldDescriptorProto{{
+				Name:       proto.String("text"),
+				Number:     proto.Int32(1),
+				JsonName:   proto.String("text"),
+				OneofIndex: proto.Int32(0),
+				Type:       descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				Label:      descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+			}},
+		})
+		if _, err := extractFile(file, DefaultConfig()); err == nil {
+			t.Fatal("expected error for invalid default_oneof_auto_tags key")
+		}
+	})
+
+	t.Run("rejects invalid field auto_tags key", func(t *testing.T) {
+		fieldOpts := &descriptorpb.FieldOptions{}
+		proto.SetExtension(fieldOpts, binding.E_AutoTags, []string{"bad`key"})
+		file := newFile(&descriptorpb.DescriptorProto{
+			Name: proto.String("Req"),
+			Field: []*descriptorpb.FieldDescriptorProto{{
+				Name:     proto.String("name"),
+				Number:   proto.Int32(1),
+				JsonName: proto.String("name"),
+				Options:  fieldOpts,
+				Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				Label:    descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+			}},
+		})
+		if _, err := extractFile(file, DefaultConfig()); err == nil {
+			t.Fatal("expected error for invalid auto_tags key")
+		}
+	})
+
+	for _, tc := range []struct {
+		name string
+		tag  string
+	}{
+		{name: "backtick in value", tag: "custom:\"a`b\""},
+		{name: "escaped backtick in value", tag: `custom:"\x60"`},
+		{name: "backtick in key", tag: "a`b:\"c\""},
+	} {
+		t.Run("rejects E_Tags "+tc.name, func(t *testing.T) {
+			fieldOpts := &descriptorpb.FieldOptions{}
+			proto.SetExtension(fieldOpts, binding.E_Tags, []string{tc.tag})
+			file := newFile(&descriptorpb.DescriptorProto{
+				Name: proto.String("Req"),
+				Field: []*descriptorpb.FieldDescriptorProto{{
+					Name:     proto.String("name"),
+					Number:   proto.Int32(1),
+					JsonName: proto.String("name"),
+					Options:  fieldOpts,
+					Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+					Label:    descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+				}},
+			})
+			if _, err := extractFile(file, DefaultConfig()); err == nil {
+				t.Fatalf("expected error for E_Tags %q", tc.tag)
+			}
+		})
+	}
+
+	t.Run("ignores whitespace-only E_Tags", func(t *testing.T) {
+		fieldOpts := &descriptorpb.FieldOptions{}
+		proto.SetExtension(fieldOpts, binding.E_Tags, []string{"   "})
+		file := newFile(&descriptorpb.DescriptorProto{
+			Name: proto.String("Req"),
+			Field: []*descriptorpb.FieldDescriptorProto{{
+				Name:     proto.String("name"),
+				Number:   proto.Int32(1),
+				JsonName: proto.String("name"),
+				Options:  fieldOpts,
+				Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				Label:    descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+			}},
+		})
+		tags, err := extractFile(file, DefaultConfig())
+		if err != nil {
+			t.Fatalf("unexpected error for whitespace E_Tags: %v", err)
+		}
+		if len(tags) != 0 {
+			t.Fatalf("expected empty tags, got %v", tags)
+		}
+	})
 }

@@ -44,7 +44,7 @@ protoc-gen-*/
 |           |   |-- basic.proto
 |           |   |-- complex.proto
 |           |   `-- edge_cases.proto
-|           |-- pb/                   # Descriptor sets precompiled by buf
+|           |-- pb/                   # Descriptor sets precompiled by buf (gitignored when rebuilt via `make testdata`)
 |           |   |-- basic.pb
 |           |   |-- complex.pb
 |           |   `-- edge_cases.pb
@@ -108,7 +108,7 @@ func TestGenerateFile_EmptyService(t *testing.T) {
     // and Generate is true. With precompiled .pb files (buf bundles imports) use
     // testutil.FileToGenerate instead — see the pitfall note in Layer 2.
     file := plugin.Files[0]
-    genFile, err := GenerateFile(plugin, file, &Config{Omitempty: true})
+    genFile, err := GenerateFile(plugin, file, &Config{OmitEmpty: true})
     if err != nil {
         t.Fatalf("GenerateFile failed: %v", err)
     }
@@ -177,7 +177,7 @@ func TestGenerateFile_StreamingOnly(t *testing.T) {
 
     // Safe here: single hand-written file, no imports (see note above).
     file := plugin.Files[0]
-    genFile, err := GenerateFile(plugin, file, &Config{Omitempty: false})
+    genFile, err := GenerateFile(plugin, file, &Config{OmitEmpty: false})
     if err != nil {
         t.Fatalf("GenerateFile failed: %v", err)
     }
@@ -244,8 +244,10 @@ test: testdata
 >    strips buf-only metadata so the output unmarshals straight into
 >    `descriptorpb.FileDescriptorSet`.
 >
-> Only `make testdata` needs `buf`; `go test` runs against the committed `*.pb`
-> files. (Pure-`protoc` fallback: vendor the missing `.proto` files into a
+> Only `make testdata` needs `buf`; `go test` reads the generated `*.pb` files
+> (which are rebuilt by `make testdata` and gitignored in `protoc-gen-sphere-binding`
+> and `protoc-gen-sphere-errors`, or committed in repos that track `pb/`).
+> (Pure-`protoc` fallback: vendor the missing `.proto` files into a
 > committed `deps/` tree and pass `--include_imports --include_source_info`.)
 
 **Test loading helpers** reused by each project:
@@ -353,7 +355,7 @@ func TestGenerateFile_WithErrorEnums(t *testing.T) {
 
     file := testutil.FileToGenerate(t, plugin)
     genFile, err := GenerateFile(plugin, file, &Config{
-        NewErrorsFunc: protogen.GoIdent{
+        NewErrorFunc: protogen.GoIdent{
             GoName:       "NewError",
             GoImportPath: "github.com/go-sphere/httpx",
         },
@@ -396,7 +398,7 @@ func TestGenerateFile_SkipsNormalEnums(t *testing.T) {
 
     file := testutil.FileToGenerate(t, plugin)
     genFile, err := GenerateFile(plugin, file, &Config{
-        NewErrorsFunc: protogen.GoIdent{
+        NewErrorFunc: protogen.GoIdent{
             GoName:       "NewError",
             GoImportPath: "github.com/go-sphere/httpx",
         },
@@ -485,7 +487,7 @@ func TestGoldenFiles(t *testing.T) {
             plugin := testutil.MustCreatePlugin(t, set, tt.protoName)
 
             file := testutil.FileToGenerate(t, plugin)
-            genFile, err := GenerateFile(plugin, file, &Config{Omitempty: true})
+            genFile, err := GenerateFile(plugin, file, &Config{OmitEmpty: true})
             if err != nil {
                 t.Fatalf("GenerateFile failed: %v", err)
             }
@@ -568,10 +570,12 @@ the helpers above.
    golden files do not churn with the host toolchain (an unset version renders as
    `(unknown)`).
 
-6. **Commit the fixtures.** `.pb` descriptor sets, golden files, and `buf.lock`
-   must be checked in so `go test ./...` runs without `buf` installed (e.g. in
-   CI). Only `make testdata` / `make update-golden` need `buf`. Verify they are
-   not excluded by `.gitignore`.
+6. **Commit the fixtures (except gitignored `pb/` / `gen/`).** Golden files,
+   `.proto` sources, and `buf.lock` must be checked in; `testdata/pb/` is
+   gitignored in `protoc-gen-sphere-binding` and `protoc-gen-sphere-errors`
+   (rebuilt by `make testdata` before `go test` runs) and committed in repos
+   whose `.gitignore` does not exclude it. Only `make testdata` /
+   `make update-golden` need `buf`.
 
 7. **Keep source info so comments survive.** If the plugin emits anything derived
    from proto comments — Go doc comments, Swagger `@Description`, etc. — the
@@ -583,13 +587,13 @@ the helpers above.
 8. **Build a fully-populated `Config`, not a bare struct literal.** For
    protoc-gen-sphere the generated output references the router/context/handler
    and response types from `Config`'s `protogen.GoIdent` fields. A bare
-   `&http.Config{Omitempty: true}` leaves those empty and produces
+   `&http.Config{OmitEmpty: true}` leaves those empty and produces
    non-representative golden files. Use `http.DefaultConfig()` (the same defaults
    main.go uses) and override only what a case needs:
 
    ```go
    cfg := http.DefaultConfig()
-   cfg.Omitempty = false // e.g. exercise the auto-POST default route
+   cfg.OmitEmpty = false // e.g. exercise the auto-POST default route
    genFile, err := http.GenerateFile(plugin, file, cfg)
    ```
 

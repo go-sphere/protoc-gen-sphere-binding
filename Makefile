@@ -13,7 +13,7 @@ DIRECT_ORIGIN := GOPRIVATE=github.com/go-sphere/*
 TESTDATA := generate/binding/testdata
 TOOLS_BIN := $(CURDIR)/.tools
 
-# Pin the fixture generator to the same protobuf module version as go.mod / CI
+# Pin the fixture generator to the same protobuf module version as go.mod
 # (and the committed golden headers). A newer protoc-gen-go on PATH would only
 # change the version comment, but that still fails byte-for-byte golden tests.
 PROTOC_GEN_GO_VERSION := $(shell $(GO) list -m -f '{{.Version}}' google.golang.org/protobuf)

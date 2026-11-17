@@ -2,12 +2,14 @@ package binding
 
 import (
 	"bytes"
+	"cmp"
 	"go/ast"
 	"go/format"
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"sort"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/structtag"
@@ -106,31 +108,49 @@ func retagAST(file *ast.File, tags StructTags, changed *bool) error {
 						continue
 					}
 
-					if field.Tag == nil {
-						field.Tag = &ast.BasicLit{Kind: token.STRING}
+					var currentTagValue string
+					if field.Tag != nil && field.Tag.Value != "" {
+						var err error
+						currentTagValue, err = strconv.Unquote(field.Tag.Value)
+						if err != nil {
+							return err
+						}
 					}
 
-					currentTagValue := strings.Trim(field.Tag.Value, "`")
 					oldTags, err := structtag.Parse(currentTagValue)
 					if err != nil {
 						return err
 					}
+					if oldTags == nil {
+						oldTags = &structtag.Tags{}
+					}
 
 					originalTagValue := oldTags.String()
 
-					sort.Stable(newTags)
-					for _, t := range newTags.Tags() {
+					sorted := slices.Clone(newTags.Tags())
+					slices.SortStableFunc(sorted, func(a, b *structtag.Tag) int {
+						return cmp.Compare(a.Key, b.Key)
+					})
+					for _, t := range sorted {
 						if err := oldTags.Set(t); err != nil {
 							return err
 						}
 					}
 					newTagValue := oldTags.String()
 
-					if changed != nil && originalTagValue != newTagValue {
-						*changed = true
+					if originalTagValue != newTagValue {
+						if changed != nil {
+							*changed = true
+						}
+						if field.Tag == nil {
+							field.Tag = &ast.BasicLit{Kind: token.STRING}
+						}
+						if strings.ContainsRune(newTagValue, '`') {
+							field.Tag.Value = strconv.Quote(newTagValue)
+						} else {
+							field.Tag.Value = "`" + newTagValue + "`"
+						}
 					}
-
-					field.Tag.Value = "`" + newTagValue + "`"
 				}
 			}
 		}

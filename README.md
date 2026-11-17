@@ -15,7 +15,7 @@ go install github.com/go-sphere/protoc-gen-sphere-binding@latest
 The behavior of `protoc-gen-sphere-binding` can be customized with the following parameters:
 - **`version`**: Print the current plugin version and exit. (Default: `false`)
 - **`out`**: The output directory for the modified `.pb.go` files. (Default: `api`)
-- **`auto_remove_json`**: Automatically remove json tag when sphere binding location is set. (Default: `true`)
+- **`auto_remove_json`**: Automatically set `json:"-"` when a non-JSON sphere binding location (`QUERY`, `URI`, `FORM`, `HEADER`) is set so `encoding/json` ignores the field. Set `auto_remove_json=false` to keep the existing `json` tag. (Default: `true`)
 - **`binding_aliases`**: Add additional tag aliases for a binding tag. Format: `tag1=alias1,tag2=alias2`. Example: `query=form,uri=path`. Only the four binding tags `query`, `uri`, `form` and `header` can be aliased; entries for any other key are ignored. (Default: `""`)
 
 
@@ -60,11 +60,11 @@ The plugin works in conjunction with `protoc-gen-go` and should be run after the
 The plugin supports the following binding locations through the `sphere.binding.location` annotation:
 
 - `BINDING_LOCATION_JSON`: Fields bound to JSON request body (default behavior)
-- `BINDING_LOCATION_QUERY`: Fields bound to query parameters (adds `query` tag, removes `json` tag)
-- `BINDING_LOCATION_URI`: Fields bound to URI path parameters (adds `uri` tag, removes `json` tag)
-- `BINDING_LOCATION_FORM`: Fields bound to form parameters (adds `form` tag, removes `json` tag)
-- `BINDING_LOCATION_HEADER`: Fields bound to HTTP headers (adds `header` tag, removes `json` tag)
-- `BINDING_LOCATION_UNSPECIFIED`: Not set explicitly; the field inherits the message-level `default_location`
+- `BINDING_LOCATION_QUERY`: Fields bound to query parameters (adds `query` tag, sets `json:"-"` when `auto_remove_json` is `true`)
+- `BINDING_LOCATION_URI`: Fields bound to URI path parameters (adds `uri` tag, sets `json:"-"` when `auto_remove_json` is `true`)
+- `BINDING_LOCATION_FORM`: Fields bound to form parameters (adds `form` tag, sets `json:"-"` when `auto_remove_json` is `true`)
+- `BINDING_LOCATION_HEADER`: Fields bound to HTTP headers (adds `header` tag, sets `json:"-"` when `auto_remove_json` is `true`)
+- `BINDING_LOCATION_UNSPECIFIED`: When omitted, the field inherits the message-level `default_location` (or for a real oneof member, `default_oneof_location`). When set explicitly on a field, it overrides `default_location` / `default_oneof_location` and keeps the field in the JSON body (no non-JSON tag or `json:"-"` is added)
 
 `QUERY`, `URI` and `HEADER` decode from a single string token, so they are valid only on scalar and enum fields. Annotating a `map`, `bytes` or `message` field with one of these locations is a generation-time error, well-known types such as `Timestamp`, `Duration` and `wrapperspb.*Value` included: the httpx query/uri/header decoders cannot read them from a single token. `JSON` and `FORM` accept any type; `FORM` can also carry `bytes`/files.
 
@@ -177,7 +177,9 @@ type BodyPathTestRequest_Request struct {
 
 ## Usage in HTTP Handlers
 
-The generated tags work seamlessly with Gin's binding functions:
+With [`github.com/go-sphere/httpx`](https://github.com/go-sphere/httpx) adapters (such as `ginx`, `echox`, `fiberx`, `hertzx`, and `stdx`), `BindJSON`, `BindQuery`, `BindUri`, `BindHeader`, and `BindForm` read the generated `json`, `query`, `uri`, `header`, and `form` tags directly.
+
+> **Note for direct Gin usage:** Gin's `ctx.ShouldBindQuery` reads `form` tags rather than `query` tags. If you call Gin's `ShouldBindQuery` directly instead of an `httpx` adapter, pass `binding_aliases=query=form` so query fields also receive a `form` tag:
 
 ```go
 func handler(ctx *gin.Context) {
@@ -188,7 +190,7 @@ func handler(ctx *gin.Context) {
         // handle error
     }
     
-    // Bind query parameters
+    // Bind query parameters (requires binding_aliases=query=form for raw Gin ShouldBindQuery)
     if err := ctx.ShouldBindQuery(&req); err != nil {
         // handle error
     }
@@ -269,11 +271,13 @@ message EventRequest {
 
 When `auto_remove_json` is `true` (default):
 
-- `BINDING_LOCATION_URI`: Removes `json` tag and adds `uri` tag
-- `BINDING_LOCATION_QUERY`: Removes `json` tag and adds `query` tag
-- `BINDING_LOCATION_HEADER`: Removes `json` tag and adds `header` tag
-- `BINDING_LOCATION_FORM`: Removes `json` tag and adds `form` tag
-- `BINDING_LOCATION_JSON`: No changes (keeps `json` tag)
+- `BINDING_LOCATION_URI`: Sets `json:"-"` and adds `uri` tag
+- `BINDING_LOCATION_QUERY`: Sets `json:"-"` and adds `query` tag
+- `BINDING_LOCATION_HEADER`: Sets `json:"-"` and adds `header` tag
+- `BINDING_LOCATION_FORM`: Sets `json:"-"` and adds `form` tag
+- `BINDING_LOCATION_JSON` (or explicit `BINDING_LOCATION_UNSPECIFIED`): No changes (keeps `json` tag)
+
+When `auto_remove_json` is `false`, the original `json` tag is preserved alongside the binding tag (`uri`, `query`, `header`, or `form`).
 
 ## Integration with protoc-gen-sphere
 
