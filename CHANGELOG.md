@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.7 (2026-11-19)
+
 ### Fixed
 
 - `main`: update reported `-version` to `0.0.6`.
